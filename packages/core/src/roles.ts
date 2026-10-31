@@ -11,6 +11,7 @@ export const NOMBRES_ROL: Record<Rol, string> = {
 
 export const PERMISOS = {
   editarPlanificacion: ['JP'],
+  gestionarRecursos: ['JP'],
   importarDatos: ['JP'],
   gestionarSolicitudesCambio: ['JP'],
   adjuntarEvidencias: ['JP', 'CC'],

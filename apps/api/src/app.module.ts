@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { BitacoraModule } from './comun/bitacora/bitacora.module';
 import { CalendarioModule } from './calendario/calendario.module';
+import { CatalogosModule } from './catalogos/catalogos.module';
 import { DependenciasModule } from './dependencias/dependencias.module';
 import { HitosModule } from './hitos/hitos.module';
 import { LineasBaseModule } from './lineas-base/lineas-base.module';
@@ -20,6 +21,7 @@ import { TareasModule } from './tareas/tareas.module';
     RecalculoModule,
     TareasModule,
     CalendarioModule,
+    CatalogosModule,
     DependenciasModule,
     HitosModule,
     LineasBaseModule,

@@ -1,6 +1,7 @@
 import { EstadoProyecto, NivelTarea, Prisma, PrismaClient, TipoDependencia } from '@prisma/client';
 import {
   CALENDARIO_POR_DEFECTO,
+  claveNombre,
   crearCalendarioLaboral,
   dateAFechaIso,
   estaAtrasada,
@@ -11,6 +12,7 @@ import {
   numerarArbol,
   planificarProyecto,
   sumarDiasHabiles,
+  TIPOS_RECURSO,
   type CalendarioLaboral,
   type DependenciaCronograma,
   type TareaPlanificacion,
@@ -753,6 +755,129 @@ async function sembrarDemostracionGantt(proyectoId: number, fechaInicioIso: stri
   }
 }
 
+async function sembrarCatalogos(): Promise<void> {
+  for (const tipo of TIPOS_RECURSO) {
+    await prisma.tipoRecurso.upsert({
+      where: { nombre: tipo.nombre },
+      create: { nombre: tipo.nombre, descripcion: tipo.descripcion },
+      update: { descripcion: tipo.descripcion },
+    });
+  }
+
+  const PROFESIONALES_SEMILLA = [
+    {
+      nombre: 'Rodrigo Fuentes',
+      cargo: 'Jefe de taller',
+      tarifaHora: 12000,
+      horasDiarias: 8,
+    },
+    {
+      nombre: 'Camila Rojas',
+      cargo: 'Mecánica senior',
+      tarifaHora: 9500,
+      horasDiarias: 8,
+    },
+    {
+      nombre: 'Matías Soto',
+      cargo: 'Mecánico',
+      tarifaHora: 7500,
+      horasDiarias: 8,
+    },
+    {
+      nombre: 'Valentina Muñoz',
+      cargo: 'Desarrolladora de software',
+      tarifaHora: 11000,
+      horasDiarias: 7.5,
+    },
+    {
+      nombre: 'Diego Pizarro',
+      cargo: 'Técnico de soporte',
+      tarifaHora: 8000,
+      horasDiarias: 6,
+    },
+  ];
+
+  for (const p of PROFESIONALES_SEMILLA) {
+    await prisma.profesional.upsert({
+      where: { nombre: p.nombre },
+      create: {
+        nombre: p.nombre,
+        claveNombre: claveNombre(p.nombre),
+        cargo: p.cargo,
+        tarifaHora: p.tarifaHora,
+        horasDiarias: p.horasDiarias,
+        activo: true,
+      },
+      update: {},
+    });
+  }
+
+  const tipos = await prisma.tipoRecurso.findMany();
+  const mapaTipos = new Map(tipos.map((t) => [t.nombre, t.id]));
+
+  const RECURSOS_SEMILLA = [
+    {
+      nombre: 'Mecánico subcontratado',
+      tipo: 'Humano',
+      unidad: 'hora',
+      costoUnitario: 9000,
+    },
+    {
+      nombre: 'Elevador hidráulico de dos columnas',
+      tipo: 'Equipamiento',
+      unidad: 'día',
+      costoUnitario: 25000,
+    },
+    {
+      nombre: 'Escáner de diagnóstico OBD-II',
+      tipo: 'Equipamiento',
+      unidad: 'hora',
+      costoUnitario: 3500,
+    },
+    {
+      nombre: 'Aceite de motor 5W-30',
+      tipo: 'Material',
+      unidad: 'litro',
+      costoUnitario: 7990,
+    },
+    {
+      nombre: 'Filtro de aceite',
+      tipo: 'Material',
+      unidad: 'unidad',
+      costoUnitario: 6500,
+    },
+    {
+      nombre: 'Licencia de software de gestión del taller',
+      tipo: 'Servicio',
+      unidad: 'mes',
+      costoUnitario: 45000,
+    },
+    {
+      nombre: 'Alineación y balanceo externo',
+      tipo: 'Servicio',
+      unidad: 'servicio',
+      costoUnitario: 25000,
+    },
+  ];
+
+  for (const r of RECURSOS_SEMILLA) {
+    const tipoRecursoId = mapaTipos.get(r.tipo);
+    if (!tipoRecursoId) continue;
+    await prisma.recurso.upsert({
+      where: { nombre: r.nombre },
+      create: {
+        nombre: r.nombre,
+        claveNombre: claveNombre(r.nombre),
+        tipoRecursoId,
+        unidad: r.unidad,
+        costoUnitario: r.costoUnitario,
+        activo: true,
+      },
+      update: {},
+    });
+  }
+}
+
 async function sembrar(): Promise<void> {
   let proyectoPrincipalId: number | null = null;
   let proyectoDemoId: number | null = null;
@@ -819,6 +944,8 @@ async function sembrar(): Promise<void> {
     const fechaInicioIso = sumarDiasHabiles(hoyEnZona(), -20, CALENDARIO_POR_DEFECTO);
     await sembrarDemostracionGantt(proyectoDemoId, fechaInicioIso);
   }
+
+  await sembrarCatalogos();
 
   const tablas = await prisma.$queryRaw<{ total: bigint }[]>`
     SELECT count(*) AS total FROM information_schema.tables

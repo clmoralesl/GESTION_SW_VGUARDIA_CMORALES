@@ -5,7 +5,7 @@ import { ROL_BD } from '../roles/rol-bd';
 import { CambioCampo, ValorBitacora } from './diferencias';
 
 export interface ContextoBitacora {
-  proyectoId: number;
+  proyectoId: number | null;
   entidad: string;
   entidadId: number;
   rol: Rol;

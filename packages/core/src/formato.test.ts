@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatearFecha,
   formatearFechaHora,
+  formatearHoras,
   formatearMonto,
   formatearPorcentaje,
   SIN_DATO,
@@ -51,5 +52,17 @@ describe('formato', () => {
     expect(formatearPorcentaje(undefined)).toBe(SIN_DATO);
     expect(formatearPorcentaje(Number.NaN)).toBe(SIN_DATO);
     expect(formatearPorcentaje(Number.POSITIVE_INFINITY)).toBe(SIN_DATO);
+  });
+
+  it('formatea horas con hasta 2 decimales y sufijo h', () => {
+    expect(formatearHoras(8)).toBe('8 h');
+    expect(formatearHoras(7.5)).toBe('7,5 h');
+    expect(formatearHoras('7.50')).toBe('7,5 h');
+    expect(formatearHoras(6.25)).toBe('6,25 h');
+    expect(formatearHoras(0)).toBe('0 h');
+    expect(formatearHoras(null)).toBe(SIN_DATO);
+    expect(formatearHoras(undefined)).toBe(SIN_DATO);
+    expect(formatearHoras('')).toBe(SIN_DATO);
+    expect(formatearHoras('invalido')).toBe(SIN_DATO);
   });
 });

@@ -22,3 +22,4 @@ export * from './hitos';
 export * from './recalculo';
 export * from './atraso';
 export * from './lineas-base';
+export * from './catalogos';

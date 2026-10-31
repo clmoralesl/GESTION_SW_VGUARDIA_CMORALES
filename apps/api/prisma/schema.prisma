@@ -234,6 +234,7 @@ model Dependencia {
 model Profesional {
   id           Int          @id @default(autoincrement())
   nombre       String       @unique @db.VarChar(120)
+  claveNombre  String       @unique @map("clave_nombre") @db.VarChar(120)
   cargo        String       @db.VarChar(120)
   tarifaHora   Decimal      @map("tarifa_hora") @db.Decimal(12, 2)
   horasDiarias Decimal      @default(8) @map("horas_diarias") @db.Decimal(4, 2)
@@ -255,6 +256,7 @@ model TipoRecurso {
 model Recurso {
   id            Int          @id @default(autoincrement())
   nombre        String       @unique @db.VarChar(120)
+  claveNombre   String       @unique @map("clave_nombre") @db.VarChar(120)
   tipoRecursoId Int          @map("tipo_recurso_id")
   unidad        String       @db.VarChar(30)
   costoUnitario Decimal      @map("costo_unitario") @db.Decimal(12, 2)

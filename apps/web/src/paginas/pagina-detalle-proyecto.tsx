@@ -18,6 +18,7 @@ import {
 import { modals } from '@mantine/modals';
 import {
   IconAlertCircle,
+  IconAlertTriangle,
   IconArrowLeft,
   IconCalendar,
   IconChecklist,
@@ -35,6 +36,7 @@ import {
   puedeTransicionar,
   type EstadoProyecto,
 } from '@autofix/core';
+import { useAlertasProyecto, useCostosProyecto } from '../api/asignaciones';
 import { useCambiarEstadoProyecto, useProyecto } from '../api/proyectos';
 import { BotonProtegido } from '../componentes/boton-protegido';
 import { AvisoProyectoCerrado } from '../proyectos/aviso-proyecto-cerrado';
@@ -47,12 +49,25 @@ const COLORES_ESTADO: Record<EstadoProyecto, string> = {
   CERRADO: 'gray',
 };
 
+const ETIQUETAS_TIPO_ALERTA: Record<string, string> = {
+  SOBREASIGNACION: 'Sobreasignación',
+  PRESUPUESTO: 'Presupuesto',
+};
+
+const ETIQUETAS_SEVERIDAD: Record<string, string> = {
+  ADVERTENCIA: 'Advertencia',
+  CRITICA: 'Crítica',
+  INFO: 'Información',
+};
+
 export function PaginaDetalleProyecto() {
   const { proyectoId } = useParams();
   const navigate = useNavigate();
   const idNumerico = Number(proyectoId);
 
   const { data: proyecto, isLoading, isError } = useProyecto(idNumerico, { silenciarError: true });
+  const { data: costos } = useCostosProyecto(idNumerico);
+  const { data: alertas } = useAlertasProyecto(idNumerico);
 
   const cambiarEstadoMutacion = useCambiarEstadoProyecto(idNumerico);
   const { cambiarProyecto } = useSesion();
@@ -180,6 +195,41 @@ export function PaginaDetalleProyecto() {
 
       {proyecto.estado === 'CERRADO' && <AvisoProyectoCerrado />}
 
+      {costos?.excedePresupuesto && (
+        <Alert color="red" icon={<IconAlertCircle size={18} />} title="Presupuesto excedido">
+          El costo planificado supera el presupuesto asignado al proyecto.
+        </Alert>
+      )}
+
+      {alertas && alertas.length > 0 && (
+        <Card withBorder radius="md" p="md">
+          <Group justify="space-between" mb="sm">
+            <Group gap="xs">
+              <IconAlertTriangle size={18} color="orange" />
+              <Title order={4}>Alertas del proyecto</Title>
+            </Group>
+            <Badge color="orange" variant="light">
+              {alertas.length} {alertas.length === 1 ? 'alerta' : 'alertas'}
+            </Badge>
+          </Group>
+          <Stack gap="xs">
+            {alertas.map((a) => (
+              <Alert
+                key={a.id}
+                color={a.severidad === 'CRITICA' ? 'red' : 'orange'}
+                title={`${ETIQUETAS_TIPO_ALERTA[a.tipo] ?? a.tipo} · ${ETIQUETAS_SEVERIDAD[a.severidad] ?? a.severidad}`}
+                icon={<IconAlertTriangle size={16} />}
+              >
+                <Text size="sm">{a.mensaje}</Text>
+                <Text size="xs" c="dimmed" mt={4}>
+                  Detectada: {formatearFechaHora(a.creadaEn)}
+                </Text>
+              </Alert>
+            ))}
+          </Stack>
+        </Card>
+      )}
+
       <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
         <Card withBorder radius="md" p="md">
           <Group justify="space-between" mb="xs">
@@ -244,6 +294,67 @@ export function PaginaDetalleProyecto() {
           </Text>
         </Card>
       </SimpleGrid>
+
+      <Card withBorder radius="md" p="md">
+        <Title order={4} mb="md">
+          Costos y Presupuesto
+        </Title>
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
+          <div>
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+              Presupuesto
+            </Text>
+            <Title order={4}>{costos ? formatearMonto(costos.presupuesto) : '—'}</Title>
+            <Text size="xs" c="dimmed" mt={4}>
+              Monto asignado
+            </Text>
+          </div>
+          <div>
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+              Costo planificado
+            </Text>
+            <Title order={4} c={costos?.excedePresupuesto ? 'red' : undefined}>
+              {costos ? formatearMonto(costos.costoPlan) : '—'}
+            </Title>
+            <Text size="xs" c="dimmed" mt={4}>
+              Suma de asignaciones planificadas
+            </Text>
+          </div>
+          <div>
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+              Costo real
+            </Text>
+            <Title order={4}>{costos ? formatearMonto(costos.costoReal) : '—'}</Title>
+            <Text size="xs" c="dimmed" mt={4}>
+              Suma de asignaciones reales
+            </Text>
+          </div>
+          <div>
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+              Diferencia (Desvío)
+            </Text>
+            <Title
+              order={4}
+              c={
+                costos && costos.diferenciaMonto > 0
+                  ? 'red'
+                  : costos && costos.diferenciaMonto < 0
+                    ? 'teal'
+                    : undefined
+              }
+            >
+              {costos ? formatearMonto(costos.diferenciaMonto) : '—'}
+            </Title>
+            {costos && (
+              <Text size="xs" c="dimmed" mt={4}>
+                {costos.diferenciaPorcentaje !== null
+                  ? `${formatearPorcentaje(costos.diferenciaPorcentaje)} vs presupuesto`
+                  : '—'}
+              </Text>
+            )}
+          </div>
+        </SimpleGrid>
+      </Card>
 
       <Card withBorder radius="md" p="md">
         <Title order={4} mb="sm">

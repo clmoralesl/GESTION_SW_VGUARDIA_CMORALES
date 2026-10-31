@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { AlertasModule } from './alertas/alertas.module';
 import { AppController } from './app.controller';
+import { AsignacionesModule } from './asignaciones/asignaciones.module';
 import { BitacoraModule } from './comun/bitacora/bitacora.module';
 import { CalendarioModule } from './calendario/calendario.module';
 import { CatalogosModule } from './catalogos/catalogos.module';
@@ -25,6 +27,8 @@ import { TareasModule } from './tareas/tareas.module';
     DependenciasModule,
     HitosModule,
     LineasBaseModule,
+    AsignacionesModule,
+    AlertasModule,
   ],
   controllers: [AppController],
 })

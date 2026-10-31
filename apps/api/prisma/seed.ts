@@ -1,6 +1,7 @@
 import { EstadoProyecto, NivelTarea, Prisma, PrismaClient, TipoDependencia } from '@prisma/client';
 import {
   CALENDARIO_POR_DEFECTO,
+  calcularHorasPlan,
   claveNombre,
   crearCalendarioLaboral,
   dateAFechaIso,
@@ -17,6 +18,10 @@ import {
   type DependenciaCronograma,
   type TareaPlanificacion,
 } from '@autofix/core';
+import { cargarCalendarioLaboral } from '../src/calendario/calendario-laboral';
+import { PasoAlertas } from '../src/recalculo/paso-alertas';
+import { PasoCostos } from '../src/recalculo/paso-costos';
+import type { ContextoRecalculo } from '../src/recalculo/recalculo.tipos';
 
 const prisma = new PrismaClient();
 
@@ -878,6 +883,85 @@ async function sembrarCatalogos(): Promise<void> {
   }
 }
 
+async function sembrarAsignaciones(proyectoId: number): Promise<void> {
+  const valentina = await prisma.profesional.findFirstOrThrow({
+    where: { nombre: 'Valentina Muñoz' },
+  });
+  const recursoEscaner = await prisma.recurso.findFirstOrThrow({
+    where: { nombre: 'Escáner de diagnóstico OBD-II' },
+  });
+
+  const tareas = await prisma.tarea.findMany({ where: { proyectoId } });
+  const t121 = tareas.find((t) => t.codigo === '1.2.1');
+  const t122 = tareas.find((t) => t.codigo === '1.2.2');
+  if (!t121 || !t122) return;
+
+  const horasPlan121 = calcularHorasPlan(t121.duracionDias, Number(valentina.horasDiarias), 60);
+
+  await prisma.asignacion.upsert({
+    where: {
+      tareaId_profesionalId: {
+        tareaId: t121.id,
+        profesionalId: valentina.id,
+      },
+    },
+    create: {
+      tareaId: t121.id,
+      profesionalId: valentina.id,
+      dedicacion: new Prisma.Decimal(60),
+      horasPlan: new Prisma.Decimal(horasPlan121),
+      tarifaAplicada: valentina.tarifaHora,
+    },
+    update: {
+      dedicacion: new Prisma.Decimal(60),
+      horasPlan: new Prisma.Decimal(horasPlan121),
+      tarifaAplicada: valentina.tarifaHora,
+    },
+  });
+
+  const horasPlan122 = calcularHorasPlan(t122.duracionDias, Number(valentina.horasDiarias), 60);
+
+  await prisma.asignacion.upsert({
+    where: {
+      tareaId_profesionalId: {
+        tareaId: t122.id,
+        profesionalId: valentina.id,
+      },
+    },
+    create: {
+      tareaId: t122.id,
+      profesionalId: valentina.id,
+      dedicacion: new Prisma.Decimal(60),
+      horasPlan: new Prisma.Decimal(horasPlan122),
+      tarifaAplicada: valentina.tarifaHora,
+    },
+    update: {
+      dedicacion: new Prisma.Decimal(60),
+      horasPlan: new Prisma.Decimal(horasPlan122),
+      tarifaAplicada: valentina.tarifaHora,
+    },
+  });
+
+  await prisma.asignacion.upsert({
+    where: {
+      tareaId_recursoId: {
+        tareaId: t121.id,
+        recursoId: recursoEscaner.id,
+      },
+    },
+    create: {
+      tareaId: t121.id,
+      recursoId: recursoEscaner.id,
+      cantidadPlan: new Prisma.Decimal(10),
+      costoUnitarioAplicado: recursoEscaner.costoUnitario,
+    },
+    update: {
+      cantidadPlan: new Prisma.Decimal(10),
+      costoUnitarioAplicado: recursoEscaner.costoUnitario,
+    },
+  });
+}
+
 async function sembrar(): Promise<void> {
   let proyectoPrincipalId: number | null = null;
   let proyectoDemoId: number | null = null;
@@ -932,12 +1016,15 @@ async function sembrar(): Promise<void> {
     });
   }
 
+  await sembrarCatalogos();
+
   if (proyectoPrincipalId) {
     await sembrarTareas(proyectoPrincipalId);
     await sembrarDependencias(proyectoPrincipalId);
     await planificarSemilla(proyectoPrincipalId);
     await sembrarLineaBase(proyectoPrincipalId);
     await sembrarHitos(proyectoPrincipalId);
+    await sembrarAsignaciones(proyectoPrincipalId);
   }
 
   if (proyectoDemoId) {
@@ -945,7 +1032,40 @@ async function sembrar(): Promise<void> {
     await sembrarDemostracionGantt(proyectoDemoId, fechaInicioIso);
   }
 
-  await sembrarCatalogos();
+  if (proyectoPrincipalId) {
+    const proyecto = await prisma.proyecto.findUniqueOrThrow({
+      where: { id: proyectoPrincipalId },
+    });
+    const tareas = await prisma.tarea.findMany({ where: { proyectoId: proyectoPrincipalId } });
+    const deps = await prisma.dependencia.findMany({ where: { proyectoId: proyectoPrincipalId } });
+    const calendario = await cargarCalendarioLaboral(prisma, proyectoPrincipalId);
+    const contexto: ContextoRecalculo = {
+      tx: prisma,
+      proyecto,
+      calendario,
+      tareas,
+      dependencias: deps.map((d) => ({
+        predecesoraId: d.predecesoraId,
+        sucesoraId: d.sucesoraId,
+        tipo: d.tipo,
+        desfaseDias: d.desfaseDias,
+      })),
+      tareasAfectadas: [],
+      hitos: null,
+      costos: null,
+      detalle: {},
+      huboCambios: false,
+    };
+
+    const pasoCostos = new PasoCostos();
+    await pasoCostos.ejecutar(contexto);
+
+    const inicioPasoAlertas = performance.now();
+    const pasoAlertas = new PasoAlertas();
+    await pasoAlertas.ejecutar(contexto);
+    const duracionAlertasMs = performance.now() - inicioPasoAlertas;
+    console.log(`[PasoAlertas] tiempo medido en seed: ${duracionAlertasMs.toFixed(2)} ms`);
+  }
 
   const tablas = await prisma.$queryRaw<{ total: bigint }[]>`
     SELECT count(*) AS total FROM information_schema.tables

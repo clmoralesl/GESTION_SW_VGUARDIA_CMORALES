@@ -114,6 +114,7 @@ export class PasoFechas implements PasoRecalculo {
       finesHojasAntes.length > 0 ? finesHojasAntes.reduce((max, f) => (f > max ? f : max)) : null;
 
     contexto.detalle = {
+      ...contexto.detalle,
       finProyectoAnterior,
       finProyectoNuevo: plan.finProyecto,
       filasActualizadas: filasQueCambian.length,

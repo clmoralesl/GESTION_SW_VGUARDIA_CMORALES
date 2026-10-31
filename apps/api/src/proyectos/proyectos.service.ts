@@ -191,6 +191,14 @@ export class ProyectosService {
           rol,
           descripcion: `Cambio de fecha de inicio del proyecto: ${antesFmt} → ${despuesFmt}`,
         });
+      } else if (
+        datos.presupuesto !== undefined &&
+        Number(antes.presupuesto) !== Number(despues.presupuesto)
+      ) {
+        await this.recalculo.ejecutar(id, tx, {
+          rol,
+          descripcion: 'Cambio de presupuesto del proyecto',
+        });
       }
 
       return this.calcularDetalle(tx, despues);

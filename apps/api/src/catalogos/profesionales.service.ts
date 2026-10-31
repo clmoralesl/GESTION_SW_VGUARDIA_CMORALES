@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { AccionBitacora, Prisma } from '@prisma/client';
+import { AccionBitacora, EstadoProyecto, Prisma } from '@prisma/client';
 import {
   claveNombre,
   mensajeTieneAsignaciones,
@@ -12,6 +12,7 @@ import { BitacoraService, ContextoBitacora } from '../comun/bitacora/bitacora.se
 import { diferencias } from '../comun/bitacora/diferencias';
 import { ExcepcionApi } from '../comun/errores/excepcion-api';
 import { PrismaService } from '../prisma/prisma.service';
+import { RecalculoService } from '../recalculo/recalculo.service';
 import { instantaneaProfesional, mapearProfesional } from './catalogos.mapeo';
 
 const ENTIDAD = 'Profesional';
@@ -38,6 +39,7 @@ export class ProfesionalesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bitacora: BitacoraService,
+    private readonly recalculo: RecalculoService,
   ) {}
 
   private contexto(entidadId: number, rol: Rol): ContextoBitacora {
@@ -129,6 +131,26 @@ export class ProfesionalesService {
           AccionBitacora.ACTUALIZAR,
           cambios,
         );
+
+        if (
+          datos.horasDiarias !== undefined &&
+          Number(antes.horasDiarias) !== Number(despues.horasDiarias)
+        ) {
+          const asignaciones = await tx.asignacion.findMany({
+            where: {
+              profesionalId: id,
+              tarea: { proyecto: { estado: { not: EstadoProyecto.CERRADO } } },
+            },
+            select: { tarea: { select: { proyectoId: true } } },
+          });
+          const proyectoIds = [...new Set(asignaciones.map((a) => a.tarea.proyectoId))];
+          for (const pId of proyectoIds) {
+            await this.recalculo.ejecutar(pId, tx, {
+              rol,
+              descripcion: `Cambio de horas diarias del profesional ${despues.nombre}`,
+            });
+          }
+        }
 
         return mapearProfesional(despues);
       });

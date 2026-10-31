@@ -5,6 +5,7 @@ import { type ProfesionalResumen, type RecursoResumen } from '@autofix/core';
 import { useProfesionales, useRecursos, useTiposRecurso } from '../api/catalogos';
 import { FormularioProfesional } from '../recursos/formulario-profesional';
 import { FormularioRecurso } from '../recursos/formulario-recurso';
+import { TablaCargaRecursos } from '../recursos/tabla-carga-recursos';
 import { TablaProfesionales } from '../recursos/tabla-profesionales';
 import { TablaRecursos } from '../recursos/tabla-recursos';
 
@@ -47,6 +48,7 @@ export function PaginaRecursos() {
           <Tabs.List mb="md">
             <Tabs.Tab value="profesionales">Profesionales</Tabs.Tab>
             <Tabs.Tab value="recursos">Recursos</Tabs.Tab>
+            <Tabs.Tab value="carga">Carga de recursos</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="profesionales">
@@ -76,6 +78,10 @@ export function PaginaRecursos() {
                 alEditar={(r) => setModalRecurso({ modo: 'editar', registro: r })}
               />
             )}
+          </Tabs.Panel>
+
+          <Tabs.Panel value="carga">
+            <TablaCargaRecursos />
           </Tabs.Panel>
         </Tabs>
       </Stack>

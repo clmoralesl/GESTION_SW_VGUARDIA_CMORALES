@@ -78,7 +78,7 @@ export function calendarioLaboralDe(
   });
 }
 
-const esDiaHabil = (dia: number, calendario: CalendarioLaboral): boolean =>
+export const esDiaHabil = (dia: number, calendario: CalendarioLaboral): boolean =>
   calendario.diasLaborables.has(diaSemana(dia)) && !calendario.feriados.has(dia);
 
 const limitePasos = (n: number, calendario: CalendarioLaboral): number =>

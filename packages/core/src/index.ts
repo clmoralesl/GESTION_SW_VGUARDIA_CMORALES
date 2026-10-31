@@ -23,3 +23,6 @@ export * from './recalculo';
 export * from './atraso';
 export * from './lineas-base';
 export * from './catalogos';
+export * from './costos';
+export * from './carga';
+export * from './asignaciones';

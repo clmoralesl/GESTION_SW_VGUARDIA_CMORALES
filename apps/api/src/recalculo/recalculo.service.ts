@@ -56,6 +56,7 @@ export class RecalculoService {
       })),
       tareasAfectadas: [],
       hitos: null,
+      costos: null,
       detalle: {},
       huboCambios: false,
     };
@@ -74,6 +75,7 @@ export class RecalculoService {
       arbol: await this.arbol.cargar(tx, proyectoId),
       tareasAfectadas: contexto.tareasAfectadas,
       hitos: contexto.hitos ?? { proyectoId, fechaCalculo: '', hitos: [] },
+      costos: contexto.costos ?? null,
     };
   }
 }

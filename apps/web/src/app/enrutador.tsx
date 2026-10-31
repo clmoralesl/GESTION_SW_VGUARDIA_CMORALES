@@ -7,6 +7,7 @@ import { PaginaHitos } from '../paginas/pagina-hitos';
 import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
 import { PaginaProximamente } from '../paginas/pagina-proximamente';
+import { PaginaRecursos } from '../paginas/pagina-recursos';
 import { PaginaTareas } from '../paginas/pagina-tareas';
 import { MODULOS } from './modulos';
 
@@ -21,6 +22,8 @@ const rutasModulos = MODULOS.map((m) => ({
       <PaginaHitos />
     ) : m.ruta === 'gantt' ? (
       <PaginaGantt />
+    ) : m.ruta === 'recursos' ? (
+      <PaginaRecursos />
     ) : (
       <PaginaProximamente titulo={m.titulo} />
     ),

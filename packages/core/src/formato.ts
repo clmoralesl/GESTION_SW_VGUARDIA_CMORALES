@@ -12,6 +12,8 @@ const FORMATO_PORCENTAJE = new Intl.NumberFormat('es-CL', {
   maximumFractionDigits: 1,
 });
 
+const FORMATO_HORAS = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 2 });
+
 const FORMATO_FECHA_HORA = new Intl.DateTimeFormat('es-CL', {
   timeZone: 'America/Santiago',
   day: '2-digit',
@@ -58,4 +60,11 @@ export function formatearPorcentaje(valor: number | string | null | undefined): 
   const numero = typeof valor === 'number' ? valor : Number(valor);
   if (!Number.isFinite(numero)) return SIN_DATO;
   return `${FORMATO_PORCENTAJE.format(numero)} %`;
+}
+
+export function formatearHoras(valor: number | string | null | undefined): string {
+  if (valor === null || valor === undefined || valor === '') return SIN_DATO;
+  const numero = typeof valor === 'number' ? valor : Number(valor);
+  if (!Number.isFinite(numero)) return SIN_DATO;
+  return `${FORMATO_HORAS.format(numero)} h`;
 }

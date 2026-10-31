@@ -152,6 +152,7 @@ erDiagram
   Profesional {
     Int id PK
     String nombre UK
+    String claveNombre UK
     String cargo
     Decimal tarifaHora
     Decimal horasDiarias
@@ -165,6 +166,7 @@ erDiagram
   Recurso {
     Int id PK
     String nombre UK
+    String claveNombre UK
     Int tipoRecursoId FK
     String unidad
     Decimal costoUnitario
@@ -370,8 +372,6 @@ erDiagram
 | `dias_laborables` | Int[]   | sí          |                        | con valor por defecto     |
 | `horas_por_dia`   | Decimal | sí          |                        | con valor por defecto     |
 
-Convención de días: `0 = domingo`, `1 = lunes`, `2 = martes`, `3 = miércoles`, `4 = jueves`, `5 = viernes`, `6 = sábado` (convención estándar de `getUTCDay()` y `EXTRACT(DOW ...)` de PostgreSQL). El valor por defecto `[1, 2, 3, 4, 5]` corresponde a lunes a viernes. La duración de tareas (`duracion_dias`) se expresa y cuenta en días hábiles conforme al calendario del proyecto.
-
 ### Feriado · `feriados`
 
 | Columna         | Tipo     | Obligatorio | Referencia (al borrar) | Restricciones             |
@@ -382,8 +382,6 @@ Convención de días: `0 = domingo`, `1 = lunes`, `2 = martes`, `3 = miércoles`
 | `descripcion`   | String   | sí          |                        |                           |
 
 Únicos compuestos: `(calendarioId, fecha)`.
-
-Los feriados precargados se obtienen de la constante `FERIADOS_CHILE` en `packages/core` para el período 2026-2030 (83 feriados nacionales). Los años 2028 a 2030 corresponden a proyecciones basadas en la legislación vigente y están sujetos a los decretos anuales de solsticio y reformas legales. No se incluyen feriados por elecciones ni feriados regionales. Al crear un proyecto, este se inicializa con los feriados cuya fecha sea igual o posterior a su fecha de inicio.
 
 ### Tarea · `tareas`
 
@@ -431,16 +429,23 @@ Los feriados precargados se obtienen de la constante `FERIADOS_CHILE` en `packag
 
 ### Profesional · `profesionales`
 
+Catálogo global del taller automotriz (no pertenece a un proyecto específico; en la bitácora registra `proyecto_id` nulo). Representa personal propio con tarifa por hora en pesos enteros, capacidad diaria de trabajo y control de sobreasignación.
+
+La columna `clave_nombre` garantiza la regla de unicidad en la base de datos de forma insensible a mayúsculas, tildes y diéresis, pero conservando la letra `ñ` como carácter distintivo (por ejemplo, «Peña» y «Pena» son apellidos distintos y no colisionan, mientras que «Juan Pérez» y «juan perez» se rechazan como duplicados).
+
 | Columna         | Tipo    | Obligatorio | Referencia (al borrar) | Restricciones             |
 | --------------- | ------- | ----------- | ---------------------- | ------------------------- |
 | `id`            | Int     | sí          |                        | PK, con valor por defecto |
 | `nombre`        | String  | sí          |                        | único                     |
+| `clave_nombre`  | String  | sí          |                        | único                     |
 | `cargo`         | String  | sí          |                        |                           |
 | `tarifa_hora`   | Decimal | sí          |                        |                           |
 | `horas_diarias` | Decimal | sí          |                        | con valor por defecto     |
 | `activo`        | Boolean | sí          |                        | con valor por defecto     |
 
 ### TipoRecurso · `tipos_recurso`
+
+Catálogo de clasificación fija para recursos del taller (Humano, Equipamiento, Material, Servicio). Se diferencia de los profesionales en que el tipo `Humano` corresponde a mano de obra externa subcontratada que se factura por unidad o consumo (por ejemplo, horas de mecánico externo), sin calendario laboral ni control de sobreasignación.
 
 | Columna       | Tipo   | Obligatorio | Referencia (al borrar) | Restricciones             |
 | ------------- | ------ | ----------- | ---------------------- | ------------------------- |
@@ -450,10 +455,13 @@ Los feriados precargados se obtienen de la constante `FERIADOS_CHILE` en `packag
 
 ### Recurso · `recursos`
 
+Catálogo global de insumos, equipos, servicios y mano de obra externa del taller automotriz (`proyecto_id` nulo en bitácora). Utiliza la columna `clave_nombre` con la misma regla de unicidad que profesionales.
+
 | Columna           | Tipo    | Obligatorio | Referencia (al borrar) | Restricciones             |
 | ----------------- | ------- | ----------- | ---------------------- | ------------------------- |
 | `id`              | Int     | sí          |                        | PK, con valor por defecto |
 | `nombre`          | String  | sí          |                        | único                     |
+| `clave_nombre`    | String  | sí          |                        | único                     |
 | `tipo_recurso_id` | Int     | sí          | TipoRecurso (Restrict) |                           |
 | `unidad`          | String  | sí          |                        |                           |
 | `costo_unitario`  | Decimal | sí          |                        |                           |

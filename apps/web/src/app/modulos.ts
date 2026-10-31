@@ -8,7 +8,7 @@ export const MODULOS: Modulo[] = [
   { ruta: 'proyectos', titulo: 'Proyectos', disponible: true },
   { ruta: 'tareas', titulo: 'Tareas', disponible: true },
   { ruta: 'gantt', titulo: 'Gantt', disponible: true },
-  { ruta: 'recursos', titulo: 'Recursos', disponible: false },
+  { ruta: 'recursos', titulo: 'Recursos', disponible: true },
   { ruta: 'hitos', titulo: 'Hitos', disponible: true },
   { ruta: 'kpi', titulo: 'KPI', disponible: false },
   { ruta: 'cambios', titulo: 'Cambios', disponible: false },

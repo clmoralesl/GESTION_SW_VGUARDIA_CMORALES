@@ -19,6 +19,9 @@ describe('roles', () => {
     expect(tienePermiso('JP', 'editarPlanificacion')).toBe(true);
     expect(tienePermiso('CC', 'editarPlanificacion')).toBe(false);
 
+    expect(tienePermiso('JP', 'gestionarRecursos')).toBe(true);
+    expect(tienePermiso('CC', 'gestionarRecursos')).toBe(false);
+
     expect(tienePermiso('CC', 'avanzarEtapasCambio')).toBe(true);
     expect(tienePermiso('JP', 'avanzarEtapasCambio')).toBe(false);
 

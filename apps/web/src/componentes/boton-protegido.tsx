@@ -37,24 +37,27 @@ type AccionProtegidaProps = ActionIconProps &
     permiso: Permiso;
     estadoProyecto?: EstadoProyecto;
     tooltip?: string;
+    bloqueo?: string | null;
   };
 
 export function AccionProtegida({
   permiso,
   estadoProyecto,
   tooltip,
+  bloqueo: bloqueoProp,
   onClick,
   ...props
 }: AccionProtegidaProps) {
   const { motivoBloqueo } = usePermisos();
-  const bloqueo = motivoBloqueo(permiso, estadoProyecto);
-  const etiqueta = bloqueo
+  const bloqueoRol = motivoBloqueo(permiso, estadoProyecto);
+  const bloqueoFinal = bloqueoRol || (bloqueoProp ?? null);
+  const etiqueta = bloqueoFinal
     ? tooltip
-      ? `${tooltip} (${bloqueo})`
-      : bloqueo
+      ? `${tooltip} (${bloqueoFinal})`
+      : bloqueoFinal
     : (tooltip ?? props['aria-label']);
 
-  if (!bloqueo) {
+  if (!bloqueoFinal) {
     if (tooltip) {
       return (
         <Tooltip label={tooltip}>
@@ -66,7 +69,7 @@ export function AccionProtegida({
   }
 
   return (
-    <Tooltip label={bloqueo}>
+    <Tooltip label={bloqueoFinal}>
       <ActionIcon
         {...props}
         aria-label={etiqueta}

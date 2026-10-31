@@ -5,6 +5,7 @@ import { PasoFechas } from './paso-fechas';
 import { PasoCostos } from './paso-costos';
 import { PasoAlertas } from './paso-alertas';
 import { PasoHitos } from './paso-hitos';
+import { PasoKpi } from './paso-kpi';
 import { RecalculoService } from './recalculo.service';
 import { PASOS_RECALCULO } from './recalculo.tipos';
 
@@ -16,6 +17,7 @@ import { PASOS_RECALCULO } from './recalculo.tipos';
     PasoCostos,
     PasoAlertas,
     PasoHitos,
+    PasoKpi,
     Reloj,
     {
       provide: PASOS_RECALCULO,
@@ -24,8 +26,9 @@ import { PASOS_RECALCULO } from './recalculo.tipos';
         costos: PasoCostos,
         alertas: PasoAlertas,
         hitos: PasoHitos,
-      ) => [fechas, costos, alertas, hitos],
-      inject: [PasoFechas, PasoCostos, PasoAlertas, PasoHitos],
+        kpi: PasoKpi,
+      ) => [fechas, costos, alertas, hitos, kpi],
+      inject: [PasoFechas, PasoCostos, PasoAlertas, PasoHitos, PasoKpi],
     },
   ],
   exports: [RecalculoService, ArbolTareasService],

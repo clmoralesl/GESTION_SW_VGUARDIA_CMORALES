@@ -26,3 +26,7 @@ export * from './catalogos';
 export * from './costos';
 export * from './carga';
 export * from './asignaciones';
+export * from './valorGanado';
+export * from './semaforo';
+export * from './variablesKpi';
+export * from './kpi';

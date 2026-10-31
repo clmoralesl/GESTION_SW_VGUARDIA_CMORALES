@@ -1,4 +1,14 @@
-import { EstadoProyecto, NivelTarea, Prisma, PrismaClient, TipoDependencia } from '@prisma/client';
+import {
+  AmbitoKpi,
+  DireccionKpi,
+  EstadoProyecto,
+  NivelTarea,
+  Prisma,
+  PrismaClient,
+  Semaforo,
+  TipoDependencia,
+  UnidadKpi,
+} from '@prisma/client';
 import {
   CALENDARIO_POR_DEFECTO,
   calcularHorasPlan,
@@ -21,6 +31,10 @@ import {
 import { cargarCalendarioLaboral } from '../src/calendario/calendario-laboral';
 import { PasoAlertas } from '../src/recalculo/paso-alertas';
 import { PasoCostos } from '../src/recalculo/paso-costos';
+import { PasoFechas } from '../src/recalculo/paso-fechas';
+import { PasoHitos } from '../src/recalculo/paso-hitos';
+import { PasoKpi } from '../src/recalculo/paso-kpi';
+import { Reloj } from '../src/comun/reloj/reloj';
 import type { ContextoRecalculo } from '../src/recalculo/recalculo.tipos';
 
 const prisma = new PrismaClient();
@@ -550,13 +564,20 @@ async function sembrarHitos(proyectoId: number): Promise<void> {
 }
 
 async function sembrarLineaBase(proyectoId: number): Promise<void> {
-  const conteo = await prisma.lineaBase.count({ where: { proyectoId } });
-  if (conteo > 0) return;
+  const lineasBaseExistentes = await prisma.lineaBase.findMany({ where: { proyectoId } });
+  for (const lb of lineasBaseExistentes) {
+    await prisma.lineaBaseTarea.deleteMany({ where: { lineaBaseId: lb.id } });
+    await prisma.lineaBase.delete({ where: { id: lb.id } });
+  }
 
   const tareas = await prisma.tarea.findMany({
     where: { proyectoId },
     orderBy: { codigo: 'asc' },
   });
+
+  const padresIds = new Set(tareas.map((t) => t.padreId).filter((id): id is number => id !== null));
+  const hojas = tareas.filter((t) => !padresIds.has(t.id));
+  const costoPlanTotal = hojas.reduce((s, t) => s + Number(t.costoPlan), 0);
 
   const lb = await prisma.lineaBase.create({
     data: {
@@ -564,7 +585,7 @@ async function sembrarLineaBase(proyectoId: number): Promise<void> {
       version: 1,
       descripcion: 'Línea base inicial',
       fechaFinProyecto: fechaIsoADate('2026-12-10'),
-      costoPlanTotal: new Prisma.Decimal(0),
+      costoPlanTotal: new Prisma.Decimal(costoPlanTotal),
       tareas: {
         create: tareas.map((t) => ({
           tareaId: t.id,
@@ -574,7 +595,7 @@ async function sembrarLineaBase(proyectoId: number): Promise<void> {
           duracionDias: t.duracionDias,
           inicioPlan: t.inicioPlan,
           finPlan: t.finPlan,
-          costoPlan: new Prisma.Decimal(0),
+          costoPlan: t.costoPlan,
         })),
       },
     },
@@ -887,17 +908,72 @@ async function sembrarAsignaciones(proyectoId: number): Promise<void> {
   const valentina = await prisma.profesional.findFirstOrThrow({
     where: { nombre: 'Valentina Muñoz' },
   });
+  const rodrigo = await prisma.profesional.findFirstOrThrow({
+    where: { nombre: 'Rodrigo Fuentes' },
+  });
+  const camila = await prisma.profesional.findFirstOrThrow({
+    where: { nombre: 'Camila Rojas' },
+  });
   const recursoEscaner = await prisma.recurso.findFirstOrThrow({
     where: { nombre: 'Escáner de diagnóstico OBD-II' },
   });
 
   const tareas = await prisma.tarea.findMany({ where: { proyectoId } });
+  const t111 = tareas.find((t) => t.codigo === '1.1.1');
+  const t112 = tareas.find((t) => t.codigo === '1.1.2');
   const t121 = tareas.find((t) => t.codigo === '1.2.1');
   const t122 = tareas.find((t) => t.codigo === '1.2.2');
-  if (!t121 || !t122) return;
+  if (!t111 || !t112 || !t121 || !t122) return;
+
+  const horasPlan111 = calcularHorasPlan(t111.duracionDias, Number(rodrigo.horasDiarias), 50);
+  await prisma.asignacion.upsert({
+    where: {
+      tareaId_profesionalId: {
+        tareaId: t111.id,
+        profesionalId: rodrigo.id,
+      },
+    },
+    create: {
+      tareaId: t111.id,
+      profesionalId: rodrigo.id,
+      dedicacion: new Prisma.Decimal(50),
+      horasPlan: new Prisma.Decimal(horasPlan111),
+      horasReales: new Prisma.Decimal(horasPlan111),
+      tarifaAplicada: rodrigo.tarifaHora,
+    },
+    update: {
+      dedicacion: new Prisma.Decimal(50),
+      horasPlan: new Prisma.Decimal(horasPlan111),
+      horasReales: new Prisma.Decimal(horasPlan111),
+      tarifaAplicada: rodrigo.tarifaHora,
+    },
+  });
+
+  const horasPlan112 = calcularHorasPlan(t112.duracionDias, Number(camila.horasDiarias), 50);
+  await prisma.asignacion.upsert({
+    where: {
+      tareaId_profesionalId: {
+        tareaId: t112.id,
+        profesionalId: camila.id,
+      },
+    },
+    create: {
+      tareaId: t112.id,
+      profesionalId: camila.id,
+      dedicacion: new Prisma.Decimal(50),
+      horasPlan: new Prisma.Decimal(horasPlan112),
+      horasReales: new Prisma.Decimal(horasPlan112 / 2),
+      tarifaAplicada: camila.tarifaHora,
+    },
+    update: {
+      dedicacion: new Prisma.Decimal(50),
+      horasPlan: new Prisma.Decimal(horasPlan112),
+      horasReales: new Prisma.Decimal(horasPlan112 / 2),
+      tarifaAplicada: camila.tarifaHora,
+    },
+  });
 
   const horasPlan121 = calcularHorasPlan(t121.duracionDias, Number(valentina.horasDiarias), 60);
-
   await prisma.asignacion.upsert({
     where: {
       tareaId_profesionalId: {
@@ -910,17 +986,18 @@ async function sembrarAsignaciones(proyectoId: number): Promise<void> {
       profesionalId: valentina.id,
       dedicacion: new Prisma.Decimal(60),
       horasPlan: new Prisma.Decimal(horasPlan121),
+      horasReales: new Prisma.Decimal(5),
       tarifaAplicada: valentina.tarifaHora,
     },
     update: {
       dedicacion: new Prisma.Decimal(60),
       horasPlan: new Prisma.Decimal(horasPlan121),
+      horasReales: new Prisma.Decimal(5),
       tarifaAplicada: valentina.tarifaHora,
     },
   });
 
   const horasPlan122 = calcularHorasPlan(t122.duracionDias, Number(valentina.horasDiarias), 60);
-
   await prisma.asignacion.upsert({
     where: {
       tareaId_profesionalId: {
@@ -960,6 +1037,220 @@ async function sembrarAsignaciones(proyectoId: number): Promise<void> {
       costoUnitarioAplicado: recursoEscaner.costoUnitario,
     },
   });
+}
+
+async function sembrarKpis(): Promise<void> {
+  const KPIS_SEMILLA = [
+    {
+      codigo: 'SPI',
+      nombre: 'Índice de desempeño del cronograma',
+      descripcion: 'Razón entre el valor ganado y el valor planificado (EV / PV).',
+      ambito: AmbitoKpi.PROYECTO,
+      formula: 'EV / PV',
+      unidad: UnidadKpi.INDICE,
+      meta: 1,
+      direccion: DireccionKpi.MAYOR_MEJOR,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 0.95 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 0.85 },
+      ],
+    },
+    {
+      codigo: 'CPI',
+      nombre: 'Índice de desempeño del costo',
+      descripcion: 'Razón entre el valor ganado y el costo real (EV / AC).',
+      ambito: AmbitoKpi.PROYECTO,
+      formula: 'EV / AC',
+      unidad: UnidadKpi.INDICE,
+      meta: 1,
+      direccion: DireccionKpi.MAYOR_MEJOR,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 0.95 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 0.85 },
+      ],
+    },
+    {
+      codigo: 'AVANCE_REAL_PCT',
+      nombre: 'Porcentaje de avance real',
+      descripcion: 'Porcentaje de avance ponderado consolidado del proyecto.',
+      ambito: AmbitoKpi.PROYECTO,
+      formula: 'AVANCE_REAL',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 100,
+      direccion: DireccionKpi.MAYOR_MEJOR,
+      umbrales: [],
+    },
+    {
+      codigo: 'CV_PCT',
+      nombre: 'Variación de costo porcentual',
+      descripcion: 'Diferencia porcentual entre el valor ganado y el costo real.',
+      ambito: AmbitoKpi.PROYECTO,
+      formula: '(EV - AC) / EV * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 0,
+      direccion: DireccionKpi.MAYOR_MEJOR,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 0 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: -10 },
+      ],
+    },
+    {
+      codigo: 'HITOS_A_TIEMPO_PCT',
+      nombre: 'Porcentaje de hitos a tiempo',
+      descripcion: 'Porcentaje de hitos cumplidos a tiempo respecto a los hitos cumplidos.',
+      ambito: AmbitoKpi.PROYECTO,
+      formula: 'HITOS_A_TIEMPO / HITOS_CUMPLIDOS * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 100,
+      direccion: DireccionKpi.MAYOR_MEJOR,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 90 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 70 },
+      ],
+    },
+    {
+      codigo: 'TAREAS_ATRASADAS_PCT',
+      nombre: 'Porcentaje de tareas atrasadas',
+      descripcion: 'Porcentaje de tareas hoja atrasadas respecto al total de tareas hoja.',
+      ambito: AmbitoKpi.PROYECTO,
+      formula: 'TAREAS_ATRASADAS / TAREAS_TOTAL * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 0,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 5 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 15 },
+      ],
+    },
+    {
+      codigo: 'DESV_DURACION_PCT',
+      nombre: 'Desviación de duración',
+      descripcion: 'Variación porcentual entre la duración actual y la planificada en la base.',
+      ambito: AmbitoKpi.PROYECTO,
+      formula: '(DUR_ACTUAL - DUR_PLAN_BASE) / DUR_PLAN_BASE * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 0,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 5 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 15 },
+      ],
+    },
+    {
+      codigo: 'HORAS_SOBREASIGNADAS_PCT',
+      nombre: 'Porcentaje de horas sobreasignadas',
+      descripcion: 'Porcentaje de horas sobreasignadas respecto al total de horas asignadas.',
+      ambito: AmbitoKpi.PROYECTO,
+      formula: 'HORAS_SOBREASIGNADAS / HORAS_ASIGNADAS * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 0,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 0 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 10 },
+      ],
+    },
+  ];
+
+  for (const def of KPIS_SEMILLA) {
+    const kpi = await prisma.kpiDefinicion.upsert({
+      where: { codigo: def.codigo },
+      create: {
+        codigo: def.codigo,
+        nombre: def.nombre,
+        descripcion: def.descripcion,
+        ambito: def.ambito,
+        formula: def.formula,
+        unidad: def.unidad,
+        meta: new Prisma.Decimal(def.meta),
+        direccion: def.direccion,
+        esAdicional: false,
+        activo: true,
+      },
+      update: {
+        nombre: def.nombre,
+        descripcion: def.descripcion,
+        ambito: def.ambito,
+        formula: def.formula,
+        unidad: def.unidad,
+        meta: new Prisma.Decimal(def.meta),
+        direccion: def.direccion,
+      },
+    });
+
+    await prisma.kpiUmbral.deleteMany({ where: { kpiId: kpi.id } });
+    if (def.umbrales.length > 0) {
+      await prisma.kpiUmbral.createMany({
+        data: def.umbrales.map((u) => ({
+          kpiId: kpi.id,
+          semaforo: u.semaforo,
+          valorDesde: new Prisma.Decimal(u.valorDesde),
+        })),
+      });
+    }
+  }
+}
+
+async function recalcularCostosSemilla(proyectoId: number): Promise<void> {
+  const proyecto = await prisma.proyecto.findUniqueOrThrow({ where: { id: proyectoId } });
+  const tareas = await prisma.tarea.findMany({ where: { proyectoId } });
+  const deps = await prisma.dependencia.findMany({ where: { proyectoId } });
+  const calendario = await cargarCalendarioLaboral(prisma, proyectoId);
+  const contexto: ContextoRecalculo = {
+    tx: prisma,
+    proyecto,
+    calendario,
+    tareas,
+    dependencias: deps.map((d) => ({
+      predecesoraId: d.predecesoraId,
+      sucesoraId: d.sucesoraId,
+      tipo: d.tipo,
+      desfaseDias: d.desfaseDias,
+    })),
+    tareasAfectadas: [],
+    hitos: null,
+    costos: null,
+    detalle: {},
+    huboCambios: false,
+  };
+  const pasoCostos = new PasoCostos();
+  await pasoCostos.ejecutar(contexto);
+}
+
+async function recalcularProyectoSemilla(proyectoId: number): Promise<void> {
+  const proyecto = await prisma.proyecto.findUniqueOrThrow({ where: { id: proyectoId } });
+  const tareas = await prisma.tarea.findMany({ where: { proyectoId } });
+  const deps = await prisma.dependencia.findMany({ where: { proyectoId } });
+  const calendario = await cargarCalendarioLaboral(prisma, proyectoId);
+  const contexto: ContextoRecalculo = {
+    tx: prisma,
+    proyecto,
+    calendario,
+    tareas,
+    dependencias: deps.map((d) => ({
+      predecesoraId: d.predecesoraId,
+      sucesoraId: d.sucesoraId,
+      tipo: d.tipo,
+      desfaseDias: d.desfaseDias,
+    })),
+    tareasAfectadas: [],
+    hitos: null,
+    costos: null,
+    detalle: {},
+    huboCambios: false,
+  };
+
+  const reloj = new Reloj();
+  const pasos = [
+    new PasoFechas(),
+    new PasoCostos(),
+    new PasoAlertas(),
+    new PasoHitos(reloj),
+    new PasoKpi(reloj),
+  ];
+  for (const paso of pasos) {
+    await paso.ejecutar(contexto);
+  }
 }
 
 async function sembrar(): Promise<void> {
@@ -1022,9 +1313,10 @@ async function sembrar(): Promise<void> {
     await sembrarTareas(proyectoPrincipalId);
     await sembrarDependencias(proyectoPrincipalId);
     await planificarSemilla(proyectoPrincipalId);
-    await sembrarLineaBase(proyectoPrincipalId);
     await sembrarHitos(proyectoPrincipalId);
     await sembrarAsignaciones(proyectoPrincipalId);
+    await recalcularCostosSemilla(proyectoPrincipalId);
+    await sembrarLineaBase(proyectoPrincipalId);
   }
 
   if (proyectoDemoId) {
@@ -1032,39 +1324,14 @@ async function sembrar(): Promise<void> {
     await sembrarDemostracionGantt(proyectoDemoId, fechaInicioIso);
   }
 
+  await sembrarKpis();
+
   if (proyectoPrincipalId) {
-    const proyecto = await prisma.proyecto.findUniqueOrThrow({
-      where: { id: proyectoPrincipalId },
-    });
-    const tareas = await prisma.tarea.findMany({ where: { proyectoId: proyectoPrincipalId } });
-    const deps = await prisma.dependencia.findMany({ where: { proyectoId: proyectoPrincipalId } });
-    const calendario = await cargarCalendarioLaboral(prisma, proyectoPrincipalId);
-    const contexto: ContextoRecalculo = {
-      tx: prisma,
-      proyecto,
-      calendario,
-      tareas,
-      dependencias: deps.map((d) => ({
-        predecesoraId: d.predecesoraId,
-        sucesoraId: d.sucesoraId,
-        tipo: d.tipo,
-        desfaseDias: d.desfaseDias,
-      })),
-      tareasAfectadas: [],
-      hitos: null,
-      costos: null,
-      detalle: {},
-      huboCambios: false,
-    };
+    await recalcularProyectoSemilla(proyectoPrincipalId);
+  }
 
-    const pasoCostos = new PasoCostos();
-    await pasoCostos.ejecutar(contexto);
-
-    const inicioPasoAlertas = performance.now();
-    const pasoAlertas = new PasoAlertas();
-    await pasoAlertas.ejecutar(contexto);
-    const duracionAlertasMs = performance.now() - inicioPasoAlertas;
-    console.log(`[PasoAlertas] tiempo medido en seed: ${duracionAlertasMs.toFixed(2)} ms`);
+  if (proyectoDemoId) {
+    await recalcularProyectoSemilla(proyectoDemoId);
   }
 
   const tablas = await prisma.$queryRaw<{ total: bigint }[]>`

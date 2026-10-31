@@ -38,6 +38,7 @@ services:
       CHOKIDAR_USEPOLLING: 'true'
       CHOKIDAR_INTERVAL: '500'
       CHECKPOINT_DISABLE: '1'
+      FECHA_CORTE: ${FECHA_CORTE:-}
     ports:
       - '${API_PORT:-3000}:3000'
     depends_on:

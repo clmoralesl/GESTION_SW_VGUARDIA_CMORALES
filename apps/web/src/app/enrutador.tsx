@@ -4,6 +4,7 @@ import { PaginaCalendario } from '../paginas/pagina-calendario';
 import { PaginaDetalleProyecto } from '../paginas/pagina-detalle-proyecto';
 import { PaginaGantt } from '../paginas/pagina-gantt';
 import { PaginaHitos } from '../paginas/pagina-hitos';
+import { PaginaKpi } from '../paginas/pagina-kpi';
 import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
 import { PaginaProximamente } from '../paginas/pagina-proximamente';
@@ -24,6 +25,8 @@ const rutasModulos = MODULOS.map((m) => ({
       <PaginaGantt />
     ) : m.ruta === 'recursos' ? (
       <PaginaRecursos />
+    ) : m.ruta === 'kpi' ? (
+      <PaginaKpi />
     ) : (
       <PaginaProximamente titulo={m.titulo} />
     ),

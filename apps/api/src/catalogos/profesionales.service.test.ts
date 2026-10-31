@@ -2,6 +2,7 @@ import { AccionBitacora, Prisma } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import { BitacoraService } from '../comun/bitacora/bitacora.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RecalculoService } from '../recalculo/recalculo.service';
 import { ProfesionalesService } from './profesionales.service';
 
 describe('ProfesionalesService', () => {
@@ -36,6 +37,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     await expect(servicio.eliminar(1, 'JP')).rejects.toThrow(
@@ -65,6 +67,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     await expect(
@@ -114,6 +117,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     await expect(servicio.actualizar(1, { nombre: 'juan perez' }, 'JP')).rejects.toThrow(
@@ -163,6 +167,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     const res = await servicio.actualizar(1, { nombre: 'Matías Soto' }, 'JP');
@@ -187,6 +192,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     await expect(
@@ -232,6 +238,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     await expect(servicio.eliminar(1, 'JP')).rejects.toThrow(
@@ -263,6 +270,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     await expect(servicio.eliminar(999, 'JP')).rejects.toThrow(
@@ -304,6 +312,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     await servicio.actualizar(1, { cargo: 'Mecánica senior', tarifaHora: 9500 }, 'JP');
@@ -348,6 +357,7 @@ describe('ProfesionalesService', () => {
     const servicio = new ProfesionalesService(
       prismaMock as unknown as PrismaService,
       bitacoraMock as unknown as BitacoraService,
+      { ejecutar: vi.fn() } as unknown as RecalculoService,
     );
 
     await servicio.actualizar(1, { activo: false }, 'JP');
@@ -358,5 +368,60 @@ describe('ProfesionalesService', () => {
       AccionBitacora.ACTUALIZAR,
       [],
     );
+  });
+
+  it('al cambiar horasDiarias ejecuta el recalculo de los proyectos abiertos con asignaciones', async () => {
+    const mockTx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      profesional: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 1,
+          nombre: 'Matías Soto',
+          claveNombre: 'matias soto',
+          cargo: 'Mecánico',
+          tarifaHora: 7500,
+          horasDiarias: 8,
+          activo: true,
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: 1,
+          nombre: 'Matías Soto',
+          claveNombre: 'matias soto',
+          cargo: 'Mecánico',
+          tarifaHora: 7500,
+          horasDiarias: 6,
+          activo: true,
+        }),
+      },
+      asignacion: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ tarea: { proyectoId: 10 } }, { tarea: { proyectoId: 20 } }]),
+      },
+    };
+
+    const prismaMock = {
+      $transaction: vi.fn().mockImplementation((cb) => cb(mockTx)),
+    };
+
+    const bitacoraMock = {
+      registrarCambios: vi.fn().mockResolvedValue({}),
+    };
+
+    const recalculoMock = {
+      ejecutar: vi.fn().mockResolvedValue({}),
+    };
+
+    const servicio = new ProfesionalesService(
+      prismaMock as unknown as PrismaService,
+      bitacoraMock as unknown as BitacoraService,
+      recalculoMock as unknown as RecalculoService,
+    );
+
+    await servicio.actualizar(1, { horasDiarias: 6 }, 'JP');
+
+    expect(recalculoMock.ejecutar).toHaveBeenCalledTimes(2);
+    expect(recalculoMock.ejecutar).toHaveBeenCalledWith(10, mockTx, expect.any(Object));
+    expect(recalculoMock.ejecutar).toHaveBeenCalledWith(20, mockTx, expect.any(Object));
   });
 });

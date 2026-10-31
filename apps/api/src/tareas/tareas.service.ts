@@ -165,6 +165,16 @@ export class TareasService {
               'La jerarquía entre el nivel de la tarea y su padre no es válida.',
             );
           }
+          const asignacionesPadre = await tx.asignacion.count({
+            where: { tareaId: padre.id },
+          });
+          if (asignacionesPadre > 0) {
+            throw new ExcepcionApi(
+              HttpStatus.CONFLICT,
+              'TAREA_CON_ASIGNACIONES',
+              'No se pueden crear subtareas bajo una tarea que tiene asignaciones.',
+            );
+          }
           await this.prepararPadreParaSubtareas(tx, padre, rol);
         } else if (!esJerarquiaValida(datos.nivel, null)) {
           throw new ExcepcionApi(

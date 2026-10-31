@@ -72,6 +72,7 @@ describe('Catálogos BD integración PostgreSQL', () => {
         tareaId: tarea.id,
         profesionalId: profesional.id,
         dedicacion: 50,
+        tarifaAplicada: 10000,
       },
     });
     expect(asignacion.id).toBeGreaterThan(0);

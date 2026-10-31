@@ -30,6 +30,7 @@ import {
 import { useCrearDependencia, useDependencias, useEliminarDependencia } from '../api/dependencias';
 import { AccionProtegida, BotonProtegido } from '../componentes/boton-protegido';
 import { usePermisos } from '../sesion/use-permisos';
+import { AsignacionesTarea } from './asignaciones-tarea';
 
 interface DetalleTareaProps {
   tarea: TareaArbol | null;
@@ -389,6 +390,14 @@ export function DetalleTarea({
                 </Table>
               )}
             </div>
+
+            <Divider />
+
+            <AsignacionesTarea
+              tarea={tarea}
+              proyectoId={proyectoId}
+              estadoProyecto={estadoProyecto}
+            />
           </Stack>
         )}
       </Stack>

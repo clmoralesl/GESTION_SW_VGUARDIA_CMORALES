@@ -3,6 +3,7 @@ import type {
   CalendarioLaboral,
   DependenciaCronograma,
   ListaHitos,
+  ResumenCostos,
   Rol,
   TareaAfectada,
 } from '@autofix/core';
@@ -22,6 +23,7 @@ export interface ContextoRecalculo {
   dependencias: DependenciaCronograma[];
   tareasAfectadas: TareaAfectada[];
   hitos: ListaHitos | null;
+  costos: ResumenCostos | null;
   detalle: Record<string, ValorBitacora>;
   huboCambios: boolean;
 }

@@ -205,7 +205,7 @@ function ordenarTopologicamente(nodos: Nodos): number[] {
 
 function restriccionHaciaAdelante(
   d: DependenciaCronograma,
-  predecesora: NodoCronograma,
+  predecesora: Pick<NodoCronograma, 'inicioTemprano' | 'finTemprano'>,
   sucesora: TareaCronograma,
   calendario: CalendarioLaboral,
 ): string {
@@ -399,4 +399,60 @@ export function calcularCronograma(
   };
 
   return { finProyecto, tareas: tareas.map(resolver) };
+}
+
+export type LimitanteInicio =
+  | { tipo: 'PROYECTO' }
+  | { tipo: 'FECHA_FIJA' }
+  | { tipo: 'FECHA_REAL' }
+  | { tipo: 'DEPENDENCIA'; dependencia: DependenciaCronograma };
+
+export interface PrevisionInicio {
+  inicioPlan: string;
+  finPlan: string;
+  limitante: LimitanteInicio;
+}
+
+export function preverInicioTarea(
+  tarea: TareaCronograma,
+  entrantes: readonly DependenciaCronograma[],
+  fechasPredecesoras: ReadonlyMap<number, { inicioPlan: string; finPlan: string }>,
+  calendario: CalendarioLaboral,
+  inicioProyecto: string,
+): PrevisionInicio {
+  if (tarea.inicioReal) {
+    return {
+      inicioPlan: tarea.inicioReal,
+      finPlan: tarea.finReal ?? calcularFinPlan(tarea.inicioReal, tarea.duracionDias, calendario),
+      limitante: { tipo: 'FECHA_REAL' },
+    };
+  }
+  let inicio = siguienteHabil(inicioProyecto, calendario);
+  let limitante: LimitanteInicio = { tipo: 'PROYECTO' };
+  if (tarea.fechaFija) {
+    const fija = siguienteHabil(tarea.fechaFija, calendario);
+    if (fija > inicio) {
+      inicio = fija;
+      limitante = { tipo: 'FECHA_FIJA' };
+    }
+  }
+  for (const d of entrantes) {
+    const fechas = fechasPredecesoras.get(d.predecesoraId);
+    if (!fechas) throw new RangeError(`La tarea ${d.predecesoraId} no forma parte del cronograma.`);
+    const valor = restriccionHaciaAdelante(
+      d,
+      { inicioTemprano: fechas.inicioPlan, finTemprano: fechas.finPlan },
+      tarea,
+      calendario,
+    );
+    if (valor > inicio) {
+      inicio = valor;
+      limitante = { tipo: 'DEPENDENCIA', dependencia: d };
+    }
+  }
+  return {
+    inicioPlan: inicio,
+    finPlan: finDesde(inicio, tarea.duracionDias, calendario),
+    limitante,
+  };
 }

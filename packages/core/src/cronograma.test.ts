@@ -9,10 +9,12 @@ import {
   CicloDetectadoError,
   compararCodigos,
   DependenciaInvalidaError,
+  preverInicioTarea,
   type DependenciaCronograma,
   type TareaCronograma,
 } from './cronograma';
 import { feriadosChileDesde } from './feriados-chile';
+import { sumarDiasCorridos } from './fechas';
 
 describe('cronograma (CPM)', () => {
   const feriados = feriadosChileDesde('2026-01-01').map((f) => f.fecha);
@@ -952,5 +954,379 @@ describe('base del paso hacia adelante', () => {
       '2026-10-31',
     );
     expect(r.tareas[0]?.inicioTemprano).toBe('2026-11-02');
+  });
+});
+
+describe('preverInicioTarea', () => {
+  const feriados = feriadosChileDesde('2026-01-01').map((f) => f.fecha);
+  const calChile = crearCalendarioLaboral({
+    diasLaborables: DIAS_LABORABLES_POR_DEFECTO,
+    feriados,
+  });
+  const inicioProyecto = '2026-11-02';
+
+  const t112: TareaCronograma = {
+    id: 4,
+    codigo: '1.1.2',
+    padreId: 2,
+    duracionDias: 4,
+    fechaFija: null,
+    inicioReal: '2026-11-05',
+    finReal: null,
+  };
+  const t121: TareaCronograma = {
+    id: 6,
+    codigo: '1.2.1',
+    padreId: 5,
+    duracionDias: 5,
+    fechaFija: null,
+    inicioReal: null,
+    finReal: null,
+  };
+  const t122: TareaCronograma = {
+    id: 7,
+    codigo: '1.2.2',
+    padreId: 5,
+    duracionDias: 4,
+    fechaFija: null,
+    inicioReal: null,
+    finReal: null,
+  };
+  const t222: TareaCronograma = {
+    id: 14,
+    codigo: '2.2.2',
+    padreId: 12,
+    duracionDias: 2,
+    fechaFija: '2026-11-23',
+    inicioReal: null,
+    finReal: null,
+  };
+
+  const fechasPredecesoras = new Map<number, { inicioPlan: string; finPlan: string }>([
+    [3, { inicioPlan: '2026-11-02', finPlan: '2026-11-04' }],
+    [4, { inicioPlan: '2026-11-05', finPlan: '2026-11-10' }],
+    [6, { inicioPlan: '2026-11-09', finPlan: '2026-11-13' }],
+    [7, { inicioPlan: '2026-11-12', finPlan: '2026-11-17' }],
+    [10, { inicioPlan: '2026-11-16', finPlan: '2026-11-23' }],
+    [11, { inicioPlan: '2026-11-24', finPlan: '2026-12-03' }],
+    [13, { inicioPlan: '2026-12-03', finPlan: '2026-12-10' }],
+    [14, { inicioPlan: '2026-11-23', finPlan: '2026-11-24' }],
+  ]);
+
+  const d4_6: DependenciaCronograma = {
+    predecesoraId: 4,
+    sucesoraId: 6,
+    tipo: 'SS',
+    desfaseDias: 2,
+  };
+  const d6_7: DependenciaCronograma = {
+    predecesoraId: 6,
+    sucesoraId: 7,
+    tipo: 'SS',
+    desfaseDias: 3,
+  };
+  const d4_7: DependenciaCronograma = {
+    predecesoraId: 4,
+    sucesoraId: 7,
+    tipo: 'FF',
+    desfaseDias: 5,
+  };
+  const d6_14_sf: DependenciaCronograma = {
+    predecesoraId: 6,
+    sucesoraId: 14,
+    tipo: 'SF',
+    desfaseDias: 0,
+  };
+
+  it('1.2.1 con fechaFija null preve inicio 2026-11-09 por SS+2 con 1.1.2', () => {
+    const res = preverInicioTarea(
+      { ...t121, fechaFija: null },
+      [d4_6],
+      fechasPredecesoras,
+      calChile,
+      inicioProyecto,
+    );
+    expect(res).toEqual({
+      inicioPlan: '2026-11-09',
+      finPlan: '2026-11-13',
+      limitante: { tipo: 'DEPENDENCIA', dependencia: d4_6 },
+    });
+  });
+
+  it('1.2.1 con fechaFija 2026-11-11 preve inicio 2026-11-11 por FECHA_FIJA', () => {
+    const res = preverInicioTarea(
+      { ...t121, fechaFija: '2026-11-11' },
+      [d4_6],
+      fechasPredecesoras,
+      calChile,
+      inicioProyecto,
+    );
+    expect(res).toEqual({
+      inicioPlan: '2026-11-11',
+      finPlan: '2026-11-17',
+      limitante: { tipo: 'FECHA_FIJA' },
+    });
+  });
+
+  it('1.2.2 con duracion 7 preve inicio 2026-11-12 y fin 2026-11-20 por SS+3 con 1.2.1', () => {
+    const res = preverInicioTarea(
+      { ...t122, duracionDias: 7 },
+      [d6_7, d4_7],
+      fechasPredecesoras,
+      calChile,
+      inicioProyecto,
+    );
+    expect(res).toEqual({
+      inicioPlan: '2026-11-12',
+      finPlan: '2026-11-20',
+      limitante: { tipo: 'DEPENDENCIA', dependencia: d6_7 },
+    });
+  });
+
+  it('1.2.2 con duracion 3 preve inicio 2026-11-13 y fin 2026-11-17 por FF+5 con 1.1.2', () => {
+    const res = preverInicioTarea(
+      { ...t122, duracionDias: 3 },
+      [d6_7, d4_7],
+      fechasPredecesoras,
+      calChile,
+      inicioProyecto,
+    );
+    expect(res).toEqual({
+      inicioPlan: '2026-11-13',
+      finPlan: '2026-11-17',
+      limitante: { tipo: 'DEPENDENCIA', dependencia: d4_7 },
+    });
+  });
+
+  it('1.2.2 con duracion 1 preve inicio 2026-11-17 y fin 2026-11-17 por FF+5 con 1.1.2', () => {
+    const res = preverInicioTarea(
+      { ...t122, duracionDias: 1 },
+      [d6_7, d4_7],
+      fechasPredecesoras,
+      calChile,
+      inicioProyecto,
+    );
+    expect(res).toEqual({
+      inicioPlan: '2026-11-17',
+      finPlan: '2026-11-17',
+      limitante: { tipo: 'DEPENDENCIA', dependencia: d4_7 },
+    });
+  });
+
+  it('2.2.2 sin SF con fechaFija null preve inicio 2026-11-02 por PROYECTO', () => {
+    const res = preverInicioTarea(
+      { ...t222, fechaFija: null },
+      [],
+      fechasPredecesoras,
+      calChile,
+      inicioProyecto,
+    );
+    expect(res).toEqual({
+      inicioPlan: '2026-11-02',
+      finPlan: '2026-11-03',
+      limitante: { tipo: 'PROYECTO' },
+    });
+  });
+
+  it('2.2.2 con SF+0 de 1.2.1 con fechaFija null preve inicio 2026-11-05 por SF+0', () => {
+    const res = preverInicioTarea(
+      { ...t222, fechaFija: null },
+      [d6_14_sf],
+      fechasPredecesoras,
+      calChile,
+      inicioProyecto,
+    );
+    expect(res).toEqual({
+      inicioPlan: '2026-11-05',
+      finPlan: '2026-11-06',
+      limitante: { tipo: 'DEPENDENCIA', dependencia: d6_14_sf },
+    });
+  });
+
+  it('1.1.2 con duracion 6 preve inicio 2026-11-05 y fin 2026-11-12 por FECHA_REAL', () => {
+    const res = preverInicioTarea(
+      { ...t112, duracionDias: 6 },
+      [],
+      fechasPredecesoras,
+      calChile,
+      inicioProyecto,
+    );
+    expect(res).toEqual({
+      inicioPlan: '2026-11-05',
+      finPlan: '2026-11-12',
+      limitante: { tipo: 'FECHA_REAL' },
+    });
+  });
+
+  it('coincide con calcularCronograma para cada hoja sin inicioReal y cada fecha entre -10 y +15 dias', () => {
+    const tareasBase: TareaCronograma[] = [
+      {
+        id: 1,
+        codigo: '1',
+        padreId: null,
+        duracionDias: 1,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 2,
+        codigo: '1.1',
+        padreId: 1,
+        duracionDias: 1,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 3,
+        codigo: '1.1.1',
+        padreId: 2,
+        duracionDias: 3,
+        fechaFija: null,
+        inicioReal: '2026-11-02',
+        finReal: '2026-11-04',
+      },
+      {
+        id: 4,
+        codigo: '1.1.2',
+        padreId: 2,
+        duracionDias: 4,
+        fechaFija: null,
+        inicioReal: '2026-11-05',
+        finReal: null,
+      },
+      {
+        id: 5,
+        codigo: '1.2',
+        padreId: 1,
+        duracionDias: 1,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 6,
+        codigo: '1.2.1',
+        padreId: 5,
+        duracionDias: 5,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 7,
+        codigo: '1.2.2',
+        padreId: 5,
+        duracionDias: 4,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 8,
+        codigo: '2',
+        padreId: null,
+        duracionDias: 1,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 9,
+        codigo: '2.1',
+        padreId: 8,
+        duracionDias: 1,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 10,
+        codigo: '2.1.1',
+        padreId: 9,
+        duracionDias: 6,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 11,
+        codigo: '2.1.2',
+        padreId: 9,
+        duracionDias: 8,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 12,
+        codigo: '2.2',
+        padreId: 8,
+        duracionDias: 1,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 13,
+        codigo: '2.2.1',
+        padreId: 12,
+        duracionDias: 5,
+        fechaFija: null,
+        inicioReal: null,
+        finReal: null,
+      },
+      {
+        id: 14,
+        codigo: '2.2.2',
+        padreId: 12,
+        duracionDias: 2,
+        fechaFija: '2026-11-23',
+        inicioReal: null,
+        finReal: null,
+      },
+    ];
+    const depsBase: DependenciaCronograma[] = [
+      { predecesoraId: 3, sucesoraId: 4, tipo: 'FS', desfaseDias: 0 },
+      { predecesoraId: 4, sucesoraId: 6, tipo: 'SS', desfaseDias: 2 },
+      { predecesoraId: 6, sucesoraId: 7, tipo: 'SS', desfaseDias: 3 },
+      { predecesoraId: 4, sucesoraId: 7, tipo: 'FF', desfaseDias: 5 },
+      { predecesoraId: 6, sucesoraId: 10, tipo: 'FS', desfaseDias: 0 },
+      { predecesoraId: 10, sucesoraId: 11, tipo: 'FS', desfaseDias: 0 },
+      { predecesoraId: 11, sucesoraId: 13, tipo: 'SS', desfaseDias: 7 },
+      { predecesoraId: 6, sucesoraId: 14, tipo: 'SF', desfaseDias: 0 },
+    ];
+
+    const cpmBase = calcularCronograma(tareasBase, depsBase, calChile, inicioProyecto);
+    const mapaBase = new Map(
+      cpmBase.tareas.map((t) => [t.id, { inicioPlan: t.inicioTemprano, finPlan: t.finTemprano }]),
+    );
+
+    const hojasSinReal = tareasBase.filter(
+      (t) => !tareasBase.some((h) => h.padreId === t.id) && t.inicioReal === null,
+    );
+
+    for (const hoja of hojasSinReal) {
+      const entrantes = depsBase.filter((d) => d.sucesoraId === hoja.id);
+      for (let offset = -10; offset <= 15; offset += 1) {
+        const fechaCandidata = sumarDiasCorridos(inicioProyecto, offset);
+        const tareaMod = { ...hoja, fechaFija: fechaCandidata };
+        const prevision = preverInicioTarea(
+          tareaMod,
+          entrantes,
+          mapaBase,
+          calChile,
+          inicioProyecto,
+        );
+
+        const tareasMod = tareasBase.map((t) => (t.id === hoja.id ? tareaMod : t));
+        const cpmMod = calcularCronograma(tareasMod, depsBase, calChile, inicioProyecto);
+        const resultadoHoja = cpmMod.tareas.find((t) => t.id === hoja.id)!;
+
+        expect(prevision.inicioPlan).toBe(resultadoHoja.inicioTemprano);
+        expect(prevision.finPlan).toBe(resultadoHoja.finTemprano);
+      }
+    }
   });
 });

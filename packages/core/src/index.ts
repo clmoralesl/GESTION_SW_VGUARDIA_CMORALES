@@ -20,3 +20,5 @@ export * from './tareas';
 export * from './dependencias';
 export * from './hitos';
 export * from './recalculo';
+export * from './atraso';
+export * from './lineas-base';

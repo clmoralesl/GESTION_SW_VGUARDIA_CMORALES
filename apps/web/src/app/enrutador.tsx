@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import { EstructuraApp } from '../diseno/estructura-app';
 import { PaginaCalendario } from '../paginas/pagina-calendario';
 import { PaginaDetalleProyecto } from '../paginas/pagina-detalle-proyecto';
+import { PaginaGantt } from '../paginas/pagina-gantt';
 import { PaginaHitos } from '../paginas/pagina-hitos';
 import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
@@ -18,6 +19,8 @@ const rutasModulos = MODULOS.map((m) => ({
       <PaginaTareas />
     ) : m.ruta === 'hitos' ? (
       <PaginaHitos />
+    ) : m.ruta === 'gantt' ? (
+      <PaginaGantt />
     ) : (
       <PaginaProximamente titulo={m.titulo} />
     ),

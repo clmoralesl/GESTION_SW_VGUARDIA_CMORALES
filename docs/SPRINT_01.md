@@ -276,7 +276,7 @@ Tamaños: **S** ≈ medio día · **M** ≈ 1 día · **L** ≈ 2 días.
 - [ ] Cuando un KPI pasa a amarillo o rojo se crea una `Alerta` tipo KPI; cuando vuelve a verde, la alerta se cierra sola.
 - [ ] El detalle de un KPI muestra un gráfico de línea con su historial, la meta como línea de referencia y las bandas de umbral.
 - [ ] El seed incluye los **8 KPI de proyecto e hitos**: SPI, CPI, % de avance real, variación de costo (CV%), % de hitos a tiempo, % de tareas atrasadas, desviación de duración y % de horas sobreasignadas.
-- [ ] Prueba manual documentada: al aumentar la duración de una tarea crítica, el SPI baja, se agrega una medición al historial y, si cruza el umbral, aparece una alerta.
+- [ ] Prueba manual documentada: con `FECHA_CORTE` fija, al bajar el avance real de una tarea crítica en curso, el SPI baja, se agrega una medición al historial y, si cruza el umbral, aparece una alerta. Al alargar una tarea crítica, sube la desviación de duración con el mismo efecto. Alargar una tarea no cambia el SPI porque el PV se mide contra la línea base.
 
 ---
 

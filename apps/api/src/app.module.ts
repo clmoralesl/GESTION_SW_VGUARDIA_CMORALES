@@ -7,6 +7,7 @@ import { CalendarioModule } from './calendario/calendario.module';
 import { CatalogosModule } from './catalogos/catalogos.module';
 import { DependenciasModule } from './dependencias/dependencias.module';
 import { HitosModule } from './hitos/hitos.module';
+import { KpiModule } from './kpi/kpi.module';
 import { LineasBaseModule } from './lineas-base/lineas-base.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProyectosModule } from './proyectos/proyectos.module';
@@ -29,6 +30,7 @@ import { TareasModule } from './tareas/tareas.module';
     LineasBaseModule,
     AsignacionesModule,
     AlertasModule,
+    KpiModule,
   ],
   controllers: [AppController],
 })

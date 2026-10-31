@@ -46,10 +46,10 @@ export class CalendarioSinDiasHabilesError extends Error {
 
 const MILISEGUNDOS_DIA = 86_400_000;
 
-const aDiaEpoca = (fechaIso: string): number =>
+export const aDiaEpoca = (fechaIso: string): number =>
   Math.round(Date.parse(`${fechaIso}T00:00:00.000Z`) / MILISEGUNDOS_DIA);
 
-const aFechaIso = (dia: number): string =>
+export const aFechaIso = (dia: number): string =>
   new Date(dia * MILISEGUNDOS_DIA).toISOString().slice(0, 10);
 
 const diaSemana = (dia: number): number => (((dia + 4) % 7) + 7) % 7;

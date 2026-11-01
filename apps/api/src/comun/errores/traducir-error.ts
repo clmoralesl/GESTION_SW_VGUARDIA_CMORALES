@@ -14,6 +14,7 @@ const TITULOS: Record<number, string> = {
   404: 'No encontrado',
   409: 'Conflicto',
   413: 'Contenido demasiado grande',
+  415: 'Tipo de medio no soportado',
   422: 'Operación no permitida',
   500: 'Error interno',
   503: 'Servicio no disponible',
@@ -25,6 +26,7 @@ const POR_ESTADO: Record<number, [CodigoError, string]> = {
   404: ['RECURSO_NO_ENCONTRADO', 'El recurso solicitado no existe.'],
   409: ['CONFLICTO', 'La operación entra en conflicto con el estado actual de los datos.'],
   413: ['CONTENIDO_DEMASIADO_GRANDE', 'El contenido enviado supera el tamaño permitido.'],
+  415: ['TIPO_ARCHIVO_NO_PERMITIDO', 'El tipo de archivo no está permitido.'],
 };
 
 const SIN_CONEXION_BD = new Set(['P1001', 'P1002', 'P1017']);
@@ -78,6 +80,21 @@ function traducirPrisma(error: Prisma.PrismaClientKnownRequestError): ErrorTradu
 }
 
 export function traducirError(excepcion: unknown): ErrorTraducido {
+  if (
+    excepcion &&
+    typeof excepcion === 'object' &&
+    'name' in excepcion &&
+    (excepcion as { name: string }).name === 'MulterError'
+  ) {
+    const errorMulter = excepcion as unknown as { code: string };
+    if (errorMulter.code === 'LIMIT_FILE_SIZE') {
+      return armar(
+        413,
+        'CONTENIDO_DEMASIADO_GRANDE',
+        'El archivo supera el tamaño máximo permitido de 10 MB.',
+      );
+    }
+  }
   if (excepcion instanceof ExcepcionApi) {
     return armar(excepcion.getStatus(), excepcion.codigo, excepcion.mensaje, excepcion.detalles);
   }

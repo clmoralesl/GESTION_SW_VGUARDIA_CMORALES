@@ -463,6 +463,7 @@ model EtapaCambio {
   estado             EstadoEtapa        @default(PENDIENTE)
   fechaInicio        DateTime?          @map("fecha_inicio") @db.Date
   fechaFin           DateTime?          @map("fecha_fin") @db.Date
+  fechaIniciada      DateTime?          @map("fecha_iniciada") @db.Date
   fechaCompletada    DateTime?          @map("fecha_completada")
   comentario         String?
   porcentajeAdopcion Decimal?           @map("porcentaje_adopcion") @db.Decimal(5, 2)

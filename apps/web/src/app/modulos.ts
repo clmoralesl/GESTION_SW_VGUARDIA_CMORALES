@@ -11,7 +11,7 @@ export const MODULOS: Modulo[] = [
   { ruta: 'recursos', titulo: 'Recursos', disponible: true },
   { ruta: 'hitos', titulo: 'Hitos', disponible: true },
   { ruta: 'kpi', titulo: 'KPI', disponible: true },
-  { ruta: 'cambios', titulo: 'Cambios', disponible: false },
+  { ruta: 'cambios', titulo: 'Cambios', disponible: true },
   { ruta: 'tablero-proyecto', titulo: 'Tablero proyecto', disponible: false },
   { ruta: 'tablero-cambio', titulo: 'Tablero cambio', disponible: false },
   { ruta: 'importar-exportar', titulo: 'Importar/Exportar', disponible: false },

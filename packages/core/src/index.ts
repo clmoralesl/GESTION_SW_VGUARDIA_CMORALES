@@ -30,3 +30,5 @@ export * from './valorGanado';
 export * from './semaforo';
 export * from './variablesKpi';
 export * from './kpi';
+export * from './cambios';
+export * from './evidencias';

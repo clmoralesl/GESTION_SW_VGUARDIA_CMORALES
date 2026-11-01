@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { EstructuraApp } from '../diseno/estructura-app';
 import { PaginaCalendario } from '../paginas/pagina-calendario';
+import { PaginaCambios } from '../paginas/pagina-cambios';
+import { PaginaDetalleCambio } from '../paginas/pagina-detalle-cambio';
 import { PaginaDetalleProyecto } from '../paginas/pagina-detalle-proyecto';
 import { PaginaGantt } from '../paginas/pagina-gantt';
 import { PaginaHitos } from '../paginas/pagina-hitos';
@@ -27,6 +29,8 @@ const rutasModulos = MODULOS.map((m) => ({
       <PaginaRecursos />
     ) : m.ruta === 'kpi' ? (
       <PaginaKpi />
+    ) : m.ruta === 'cambios' ? (
+      <PaginaCambios />
     ) : (
       <PaginaProximamente titulo={m.titulo} />
     ),
@@ -42,6 +46,10 @@ export const enrutador = createBrowserRouter([
         element: <Navigate to="/proyectos" replace />,
       },
       ...rutasModulos,
+      {
+        path: 'cambios/:solicitudId',
+        element: <PaginaDetalleCambio />,
+      },
       {
         path: 'proyectos/:proyectoId/calendario',
         element: <PaginaCalendario />,

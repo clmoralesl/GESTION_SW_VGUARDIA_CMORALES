@@ -32,6 +32,13 @@ services:
   api:
     <<: *app
     command: pnpm --filter @autofix/api dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/api/node_modules
+      - /app/apps/web/node_modules
+      - /app/packages/core/node_modules
+      - uploads:/app/uploads
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-autofix}:${POSTGRES_PASSWORD:-autofix}@db:5432/${POSTGRES_DB:-autofix}
       API_PORT: 3000
@@ -39,6 +46,7 @@ services:
       CHOKIDAR_INTERVAL: '500'
       CHECKPOINT_DISABLE: '1'
       FECHA_CORTE: ${FECHA_CORTE:-}
+      RUTA_UPLOADS: /app/uploads
     ports:
       - '${API_PORT:-3000}:3000'
     depends_on:
@@ -69,3 +77,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

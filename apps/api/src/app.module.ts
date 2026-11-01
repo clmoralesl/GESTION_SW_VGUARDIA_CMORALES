@@ -7,6 +7,7 @@ import { CalendarioModule } from './calendario/calendario.module';
 import { CatalogosModule } from './catalogos/catalogos.module';
 import { DependenciasModule } from './dependencias/dependencias.module';
 import { HitosModule } from './hitos/hitos.module';
+import { ImportacionesModule } from './importaciones/importaciones.module';
 import { KpiModule } from './kpi/kpi.module';
 import { LineasBaseModule } from './lineas-base/lineas-base.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -37,6 +38,7 @@ import { TareasModule } from './tareas/tareas.module';
     SolicitudesCambioModule,
     TableroModule,
     TableroCambioModule,
+    ImportacionesModule,
   ],
   controllers: [AppController],
 })

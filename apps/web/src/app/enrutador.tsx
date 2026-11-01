@@ -10,6 +10,7 @@ import { PaginaKpi } from '../paginas/pagina-kpi';
 import { PaginaLineasBase } from '../paginas/pagina-lineas-base';
 import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
+import { PaginaImportarExportar } from '../paginas/pagina-importar-exportar';
 import { PaginaProximamente } from '../paginas/pagina-proximamente';
 import { PaginaRecursos } from '../paginas/pagina-recursos';
 import { PaginaTableroProyecto } from '../paginas/pagina-tablero-proyecto';
@@ -38,6 +39,8 @@ const rutasModulos = MODULOS.map((m) => ({
       <PaginaTableroProyecto />
     ) : m.ruta === 'tablero-cambio' ? (
       <PaginaTableroCambio />
+    ) : m.ruta === 'importar-exportar' ? (
+      <PaginaImportarExportar />
     ) : (
       <PaginaProximamente titulo={m.titulo} />
     ),

@@ -2,6 +2,7 @@ import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DependenciaTarea, HitoConEstado, TareaArbol } from '@autofix/core';
 import { CLAVE_PROYECTO, CLAVE_ROL } from '../sesion/almacenamiento';
@@ -278,6 +279,17 @@ describe('PaginaGantt', () => {
               }),
           });
         }
+        if (
+          url.includes('/profesionales') ||
+          url.includes('/recursos') ||
+          url.includes('/asignaciones')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve([]),
+          });
+        }
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -287,7 +299,7 @@ describe('PaginaGantt', () => {
     );
   });
 
-  const renderConProveedores = () => {
+  const renderConProveedores = (rutaInicial = '/gantt') => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -296,7 +308,9 @@ describe('PaginaGantt', () => {
         <MantineProvider>
           <Notifications />
           <ProveedorSesion>
-            <PaginaGantt />
+            <MemoryRouter initialEntries={[rutaInicial]}>
+              <PaginaGantt />
+            </MemoryRouter>
           </ProveedorSesion>
         </MantineProvider>
       </QueryClientProvider>,
@@ -599,5 +613,38 @@ describe('PaginaGantt', () => {
     expect(
       await screen.findByText(/El proyecto se encuentra cerrado y no permite modificaciones./i),
     ).toBeInTheDocument();
+  });
+
+  it('selecciona y resalta la tarea especificada en la url mediante parametro de busqueda', async () => {
+    renderConProveedores('/gantt?tarea=6');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('fila-tarea-1.2.1')).toBeInTheDocument();
+    });
+
+    const fila6 = screen.getByTestId('fila-tarea-1.2.1');
+    expect(fila6).toHaveAttribute('data-seleccionada', 'true');
+  });
+
+  it('tras aplicar ?tarea=6, cerrar el detalle y forzar un nuevo modelo no lo reabre', async () => {
+    renderConProveedores('/gantt?tarea=6');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('fila-tarea-1.2.1')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('1.2.1 · Modelo de datos de vehículos')).toBeInTheDocument();
+
+    const botonCerrar = document.querySelector('.mantine-Drawer-close')!;
+    fireEvent.click(botonCerrar);
+
+    await waitFor(() => {
+      expect(screen.queryByText('1.2.1 · Modelo de datos de vehículos')).not.toBeInTheDocument();
+    });
+
+    const switchRutaCritica = screen.getByRole('switch', { name: /Ruta crítica/i });
+    fireEvent.click(switchRutaCritica);
+
+    expect(screen.queryByText('1.2.1 · Modelo de datos de vehículos')).not.toBeInTheDocument();
   });
 });

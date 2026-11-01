@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Alert, Card, Container, Group, Loader, Stack, Text, Title } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -67,6 +68,34 @@ export function PaginaGantt() {
   const [tareaSeleccionada, setTareaSeleccionada] = useState<TareaArbol | null>(null);
   const [exportando, setExportando] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const tareaIdParam = searchParams.get('tarea');
+
+  const ancestrosParam = useMemo(() => {
+    if (!tareaIdParam || !arbol) return [];
+    const id = Number(tareaIdParam);
+    const mapa = new Map(arbol.tareas.map((t) => [t.id, t]));
+    const res: number[] = [];
+    let act = mapa.get(id);
+    while (act && act.padreId !== null) {
+      res.push(act.padreId);
+      act = mapa.get(act.padreId);
+    }
+    return res;
+  }, [tareaIdParam, arbol]);
+
+  useEffect(() => {
+    if (ancestrosParam.length > 0) {
+      setColapsadas((prev) => {
+        const next = new Set(prev);
+        for (const ancId of ancestrosParam) {
+          next.delete(ancId);
+        }
+        return next;
+      });
+    }
+  }, [ancestrosParam]);
+
   const contenedorRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const centradoInicialRef = useRef<number | null>(null);
@@ -110,6 +139,24 @@ export function PaginaGantt() {
   ]);
 
   const ultimoProyectoMedidoRef = useRef<number | null>(null);
+  const tareaAplicadaRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!tareaIdParam || !arbol) return;
+    const id = Number(tareaIdParam);
+    if (tareaAplicadaRef.current === id) return;
+    const target = arbol.tareas.find((t) => t.id === id);
+    if (target) {
+      tareaAplicadaRef.current = id;
+      setTareaSeleccionada(target);
+      const elem =
+        document.querySelector(`[data-testid="fila-gantt-${target.id}"]`) ||
+        document.querySelector(`[data-testid="fila-tarea-${target.codigo}"]`);
+      if (elem) {
+        elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [tareaIdParam, arbol]);
 
   useEffect(() => {
     if (proyectoActivoId && ultimoProyectoMedidoRef.current !== proyectoActivoId) {
@@ -440,6 +487,9 @@ export function PaginaGantt() {
               anchoGrilla={ANCHO_GRILLA}
               contenedorRef={contenedorRef}
               svgRef={svgRef}
+              tareaSeleccionadaId={
+                tareaSeleccionada?.id ?? (tareaIdParam ? Number(tareaIdParam) : null)
+              }
             />
           )}
         </Card>

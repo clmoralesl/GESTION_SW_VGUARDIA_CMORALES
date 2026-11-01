@@ -39,6 +39,7 @@ interface GanttProps {
   anchoGrilla?: number;
   contenedorRef?: React.RefObject<HTMLDivElement | null>;
   svgRef?: React.RefObject<SVGSVGElement | null>;
+  tareaSeleccionadaId?: number | null;
 }
 
 interface EstadoArrastre {
@@ -79,6 +80,7 @@ export function Gantt({
   anchoGrilla = ANCHO_GRILLA,
   contenedorRef,
   svgRef,
+  tareaSeleccionadaId,
 }: GanttProps) {
   const estadoArrastreRef = useRef<EstadoArrastre | null>(null);
   const [fantasma, setFantasma] = useState<FantasmaArrastre | null>(null);
@@ -282,6 +284,7 @@ export function Gantt({
           paleta={paleta}
           anchoGrilla={anchoGrilla}
           tieneFilaHitosProyecto={modelo.tieneFilaHitosProyecto}
+          tareaSeleccionadaId={tareaSeleccionadaId}
         />
 
         <div style={{ width: modelo.escala.ancho, position: 'relative' }}>

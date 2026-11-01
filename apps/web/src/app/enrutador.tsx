@@ -12,6 +12,7 @@ import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
 import { PaginaProximamente } from '../paginas/pagina-proximamente';
 import { PaginaRecursos } from '../paginas/pagina-recursos';
+import { PaginaTableroProyecto } from '../paginas/pagina-tablero-proyecto';
 import { PaginaTareas } from '../paginas/pagina-tareas';
 import { MODULOS } from './modulos';
 
@@ -32,6 +33,8 @@ const rutasModulos = MODULOS.map((m) => ({
       <PaginaKpi />
     ) : m.ruta === 'cambios' ? (
       <PaginaCambios />
+    ) : m.ruta === 'tablero-proyecto' ? (
+      <PaginaTableroProyecto />
     ) : (
       <PaginaProximamente titulo={m.titulo} />
     ),

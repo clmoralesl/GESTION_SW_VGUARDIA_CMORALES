@@ -4,6 +4,7 @@ import {
   cargaSemanal,
   claveSobreasignacion,
   detectarSobreasignaciones,
+  picoCarga,
   type TareaCarga,
 } from './carga';
 
@@ -119,6 +120,22 @@ describe('carga y sobreasignacion', () => {
       { semana: '2026-11-02', porcentaje: 96, sobreasignada: true },
       { semana: '2026-11-09', porcentaje: 24, sobreasignada: false },
     ]);
+  });
+
+  it('picoCarga: un dia al 120 % en semana con promedio menor a 100 % da sobreasignado true', () => {
+    const carga = calcularCargaDiaria(
+      [
+        { profesionalId: 4, tareaId: 1, dedicacion: 60 },
+        { profesionalId: 4, tareaId: 2, dedicacion: 60 },
+      ],
+      [t(1, '2026-11-12', '2026-11-12'), t(2, '2026-11-12', '2026-11-12')],
+    );
+    const resultado = picoCarga(carga, 4, '2026-11-09', '2026-11-15');
+    expect(resultado).toEqual({
+      ocupacionMaxima: 120,
+      diaPico: '2026-11-12',
+      sobreasignado: true,
+    });
   });
 
   it('rendimiento: 60 tareas x 5 profesionales x 1 ano', () => {

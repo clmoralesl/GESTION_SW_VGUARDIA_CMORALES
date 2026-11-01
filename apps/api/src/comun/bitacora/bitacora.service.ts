@@ -9,6 +9,7 @@ export interface ContextoBitacora {
   entidad: string;
   entidadId: number;
   rol: Rol;
+  solicitudCambioId?: number | null;
 }
 
 const aJson = (
@@ -37,6 +38,9 @@ export class BitacoraService {
         valorAnterior: aJson(cambio.anterior),
         valorNuevo: aJson(cambio.nuevo),
         origen,
+        ...(contexto.solicitudCambioId !== undefined
+          ? { solicitudCambioId: contexto.solicitudCambioId }
+          : {}),
       })),
     });
   }
@@ -54,6 +58,9 @@ export class BitacoraService {
         rol: ROL_BD[contexto.rol],
         accion: AccionBitacora.CREAR,
         valorNuevo: aJson(instantanea),
+        ...(contexto.solicitudCambioId !== undefined
+          ? { solicitudCambioId: contexto.solicitudCambioId }
+          : {}),
       },
     });
   }
@@ -71,6 +78,9 @@ export class BitacoraService {
         rol: ROL_BD[contexto.rol],
         accion: AccionBitacora.ELIMINAR,
         valorAnterior: aJson(instantanea),
+        ...(contexto.solicitudCambioId !== undefined
+          ? { solicitudCambioId: contexto.solicitudCambioId }
+          : {}),
       },
     });
   }
@@ -90,6 +100,9 @@ export class BitacoraService {
         accion: AccionBitacora.RECALCULAR,
         valorNuevo: aJson(detalle),
         origen,
+        ...(contexto.solicitudCambioId !== undefined
+          ? { solicitudCambioId: contexto.solicitudCambioId }
+          : {}),
       },
     });
   }

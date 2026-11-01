@@ -20,6 +20,7 @@ import {
 import { BitacoraService } from '../comun/bitacora/bitacora.service';
 import { diferencias } from '../comun/bitacora/diferencias';
 import { ExcepcionApi } from '../comun/errores/excepcion-api';
+import { crearLineaBase } from '../lineas-base/crear-linea-base';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   errorProyectoCerrado,
@@ -207,6 +208,7 @@ export class ProyectosService {
 
   async cambiarEstado(id: number, hacia: EstadoProyectoCore, rol: Rol): Promise<ProyectoDetalle> {
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM proyectos WHERE id = ${id} FOR UPDATE`;
       const actual = await tx.proyecto.findUnique({ where: { id } });
       if (!actual) throw errorProyectoNoEncontrado();
 
@@ -248,6 +250,13 @@ export class ProyectosService {
           },
         ],
       );
+
+      if (hacia === 'EN_CURSO') {
+        const countLineasBase = await tx.lineaBase.count({ where: { proyectoId: id } });
+        if (countLineasBase === 0) {
+          await crearLineaBase(tx, id, { descripcion: 'Línea base inicial', rol }, this.bitacora);
+        }
+      }
 
       return this.calcularDetalle(tx, despues);
     });

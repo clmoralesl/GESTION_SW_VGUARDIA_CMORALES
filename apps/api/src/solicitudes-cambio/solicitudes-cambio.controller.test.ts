@@ -49,6 +49,12 @@ describe('SolicitudesCambioController', () => {
     eliminarEvidencia: vi.fn().mockResolvedValue(undefined),
     crearAccionCorrectiva: vi.fn().mockResolvedValue({ id: 1, descripcion: 'Accion' }),
     actualizarAccionCorrectiva: vi.fn().mockResolvedValue({ id: 1, descripcion: 'Actualizada' }),
+    listarImpactos: vi.fn().mockResolvedValue([]),
+    crearImpacto: vi.fn().mockResolvedValue({ id: 1, tipo: 'PRESUPUESTO' }),
+    eliminarImpacto: vi.fn().mockResolvedValue(undefined),
+    simular: vi.fn().mockResolvedValue({ antes: {}, despues: {}, tareasAfectadas: [] }),
+    aprobar: vi.fn().mockResolvedValue({ antes: {}, despues: {}, tareasAfectadas: [] }),
+    rechazar: vi.fn().mockResolvedValue(solicitudMock),
   };
 
   beforeAll(async () => {
@@ -192,5 +198,92 @@ describe('SolicitudesCambioController', () => {
       .set('X-Rol', 'JP')
       .send({});
     expect(res.status).toBe(200);
+  });
+
+  it('permite listar impactos a JP y CC', async () => {
+    const resJp = await request(app.getHttpServer())
+      .get('/solicitudes-cambio/1/impactos')
+      .set('X-Rol', 'JP');
+    expect(resJp.status).toBe(200);
+
+    const resCc = await request(app.getHttpServer())
+      .get('/solicitudes-cambio/1/impactos')
+      .set('X-Rol', 'CC');
+    expect(resCc.status).toBe(200);
+  });
+
+  it('permite POST y DELETE de impactos solo a JP y rechaza a CC con 403', async () => {
+    const cuerpoImpacto = {
+      tipo: 'PRESUPUESTO',
+      presupuesto: 50000000,
+    };
+
+    const resPostCc = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/impactos')
+      .set('X-Rol', 'CC')
+      .send(cuerpoImpacto);
+    expect(resPostCc.status).toBe(403);
+    expect(resPostCc.body.codigo).toBe('ROL_NO_PERMITIDO');
+
+    const resPostJp = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/impactos')
+      .set('X-Rol', 'JP')
+      .send(cuerpoImpacto);
+    expect(resPostJp.status).toBe(201);
+
+    const resDelCc = await request(app.getHttpServer())
+      .delete('/impactos-cambio/1')
+      .set('X-Rol', 'CC');
+    expect(resDelCc.status).toBe(403);
+    expect(resDelCc.body.codigo).toBe('ROL_NO_PERMITIDO');
+
+    const resDelJp = await request(app.getHttpServer())
+      .delete('/impactos-cambio/1')
+      .set('X-Rol', 'JP');
+    expect(resDelJp.status).toBe(204);
+  });
+
+  it('permite simular a JP y CC', async () => {
+    const resJp = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/simular')
+      .set('X-Rol', 'JP');
+    expect(resJp.status).toBe(200);
+
+    const resCc = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/simular')
+      .set('X-Rol', 'CC');
+    expect(resCc.status).toBe(200);
+  });
+
+  it('permite aprobar y rechazar solo a CC y rechaza a JP con 403', async () => {
+    const resAprobarJp = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/aprobar')
+      .set('X-Rol', 'JP');
+    expect(resAprobarJp.status).toBe(403);
+    expect(resAprobarJp.body.codigo).toBe('ROL_NO_PERMITIDO');
+
+    const resAprobarCc = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/aprobar')
+      .set('X-Rol', 'CC');
+    expect(resAprobarCc.status).toBe(200);
+
+    const resRechazarJp = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/rechazar')
+      .set('X-Rol', 'JP')
+      .send({ motivo: 'Motivo valido' });
+    expect(resRechazarJp.status).toBe(403);
+    expect(resRechazarJp.body.codigo).toBe('ROL_NO_PERMITIDO');
+
+    const resRechazarCcSinMotivo = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/rechazar')
+      .set('X-Rol', 'CC')
+      .send({});
+    expect(resRechazarCcSinMotivo.status).toBe(400);
+
+    const resRechazarCc = await request(app.getHttpServer())
+      .post('/solicitudes-cambio/1/rechazar')
+      .set('X-Rol', 'CC')
+      .send({ motivo: 'Motivo valido' });
+    expect(resRechazarCc.status).toBe(200);
   });
 });

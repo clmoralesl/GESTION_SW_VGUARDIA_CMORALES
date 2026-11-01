@@ -34,6 +34,9 @@ describe('LineasBaseController', () => {
 
   const servicioMock = {
     obtenerVigente: vi.fn(),
+    listar: vi.fn(),
+    obtenerPorVersion: vi.fn(),
+    comparar: vi.fn(),
   };
 
   beforeAll(async () => {
@@ -103,5 +106,73 @@ describe('LineasBaseController', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.codigo).toBe('VALIDACION_FALLIDA');
+  });
+
+  it('permite listar versiones de linea base respondiendo 200', async () => {
+    servicioMock.listar.mockResolvedValueOnce({
+      versiones: [{ version: 1, creadoEn: '2026-10-31T12:00:00.000Z' }],
+      versionGantt: 1,
+    });
+
+    const res = await request(app.getHttpServer())
+      .get('/proyectos/1/lineas-base')
+      .set('X-Rol', 'JP');
+
+    expect(res.status).toBe(200);
+    expect(res.body.versionGantt).toBe(1);
+    expect(servicioMock.listar).toHaveBeenCalledWith(1);
+  });
+
+  it('obtiene linea base por version respondiendo 200', async () => {
+    servicioMock.obtenerPorVersion.mockResolvedValueOnce({
+      version: 1,
+      descripcion: 'Linea base inicial',
+      creadoEn: '2026-10-31T12:00:00.000Z',
+      tareas: [],
+    });
+
+    const res = await request(app.getHttpServer())
+      .get('/proyectos/1/lineas-base/1')
+      .set('X-Rol', 'JP');
+
+    expect(res.status).toBe(200);
+    expect(res.body.version).toBe(1);
+    expect(servicioMock.obtenerPorVersion).toHaveBeenCalledWith(1, 1);
+  });
+
+  it('compara dos lineas base respondiendo 200', async () => {
+    servicioMock.comparar.mockResolvedValueOnce({
+      versionA: 1,
+      versionB: 2,
+      filas: [],
+      resumen: {
+        totalTareasA: 0,
+        totalTareasB: 0,
+        modificadas: 0,
+        agregadas: 0,
+        eliminadas: 0,
+        iguales: 0,
+        diferenciaCostoTotal: 0,
+        diferenciaDiasProyecto: 0,
+      },
+    });
+
+    const res = await request(app.getHttpServer())
+      .get('/proyectos/1/lineas-base/comparar?a=1&b=2')
+      .set('X-Rol', 'JP');
+
+    expect(res.status).toBe(200);
+    expect(res.body.versionA).toBe(1);
+    expect(res.body.versionB).toBe(2);
+    expect(servicioMock.comparar).toHaveBeenCalledWith(1, 1, 2);
+  });
+
+  it('rechaza comparar sin parametros a y b con 400', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/proyectos/1/lineas-base/comparar')
+      .set('X-Rol', 'JP');
+
+    expect(res.status).toBe(400);
+    expect(res.body.codigo).toBe('SOLICITUD_INVALIDA');
   });
 });

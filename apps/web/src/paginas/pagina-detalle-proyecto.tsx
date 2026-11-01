@@ -24,6 +24,7 @@ import {
   IconChecklist,
   IconCoins,
   IconEdit,
+  IconGitCompare,
   IconLock,
   IconPlayerPlay,
 } from '@tabler/icons-react';
@@ -152,6 +153,14 @@ export function PaginaDetalleProyecto() {
             onClick={() => navigate(`/proyectos/${proyecto.id}/calendario`)}
           >
             Calendario laboral
+          </Button>
+
+          <Button
+            variant="default"
+            leftSection={<IconGitCompare size={16} />}
+            onClick={() => navigate(`/proyectos/${proyecto.id}/lineas-base`)}
+          >
+            Líneas base
           </Button>
 
           <BotonProtegido

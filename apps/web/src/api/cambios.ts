@@ -6,14 +6,18 @@ import type {
   EntradaActualizarEtapa,
   EntradaActualizarSolicitud,
   EntradaCrearAccionCorrectiva,
+  EntradaCrearImpacto,
   EntradaCrearSolicitud,
   EntradaOmitirEtapa,
+  EntradaRechazarSolicitud,
   EstadoAccion,
   EstadoEtapa,
   EstadoSolicitud,
   NivelRiesgo,
   PrioridadSolicitud,
+  ResultadoSimulacion,
   Rol,
+  TipoImpacto,
 } from '@autofix/core';
 import { leerRol } from '../sesion/almacenamiento';
 import { API_URL, ErrorSolicitud, solicitar } from './cliente-api';
@@ -422,6 +426,160 @@ export function useActualizarAccionCorrectiva(solicitudId: number) {
       notifications.show({
         color: 'red',
         title: 'No se pudo actualizar la acción correctiva',
+        message: error.message,
+      });
+    },
+  });
+}
+
+export interface DetalleImpacto {
+  id: number;
+  solicitudId: number;
+  tipo: TipoImpacto;
+  tareaId: number | null;
+  datos: Record<string, unknown>;
+  descripcion: string | null;
+  aplicado: boolean;
+}
+
+export function useImpactosCambio(solicitudId: number | null) {
+  return useQuery<DetalleImpacto[]>({
+    queryKey: ['impactos-cambio', solicitudId],
+    queryFn: ({ signal }) =>
+      solicitar<DetalleImpacto[]>(`/solicitudes-cambio/${solicitudId}/impactos`, { signal }),
+    enabled: solicitudId !== null && !Number.isNaN(solicitudId) && solicitudId > 0,
+    staleTime: 10_000,
+  });
+}
+
+export function useCrearImpactoCambio(solicitudId: number) {
+  const queryClient = useQueryClient();
+  return useMutation<DetalleImpacto, ErrorSolicitud, EntradaCrearImpacto>({
+    mutationFn: (datos) =>
+      solicitar<DetalleImpacto>(`/solicitudes-cambio/${solicitudId}/impactos`, {
+        method: 'POST',
+        body: JSON.stringify(datos),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['impactos-cambio', solicitudId] });
+      queryClient.invalidateQueries({ queryKey: ['solicitud-cambio', solicitudId] });
+      notifications.show({
+        color: 'green',
+        title: 'Impacto registrado',
+        message: 'El impacto fue agregado a la solicitud.',
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        title: 'No se pudo registrar el impacto',
+        message: error.message,
+      });
+    },
+  });
+}
+
+export function useEliminarImpactoCambio(solicitudId: number) {
+  const queryClient = useQueryClient();
+  return useMutation<void, ErrorSolicitud, number>({
+    mutationFn: (impactoId) =>
+      solicitar<void>(`/impactos-cambio/${impactoId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['impactos-cambio', solicitudId] });
+      queryClient.invalidateQueries({ queryKey: ['solicitud-cambio', solicitudId] });
+      notifications.show({
+        color: 'green',
+        title: 'Impacto eliminado',
+        message: 'El impacto fue retirado de la solicitud.',
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        title: 'No se pudo eliminar el impacto',
+        message: error.message,
+      });
+    },
+  });
+}
+
+export function useSimularCambio(solicitudId: number) {
+  return useMutation<ResultadoSimulacion, ErrorSolicitud, void>({
+    mutationFn: () =>
+      solicitar<ResultadoSimulacion>(`/solicitudes-cambio/${solicitudId}/simular`, {
+        method: 'POST',
+      }),
+    meta: { silenciarError: true },
+  });
+}
+
+export function useAprobarSolicitudCambio(solicitudId: number, proyectoId?: number) {
+  const queryClient = useQueryClient();
+  return useMutation<ResultadoSimulacion, ErrorSolicitud, void>({
+    mutationFn: () =>
+      solicitar<ResultadoSimulacion>(`/solicitudes-cambio/${solicitudId}/aprobar`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['solicitudes-cambio'] });
+      queryClient.invalidateQueries({ queryKey: ['solicitud-cambio', solicitudId] });
+      queryClient.invalidateQueries({ queryKey: ['impactos-cambio', solicitudId] });
+      if (proyectoId) {
+        queryClient.invalidateQueries({ queryKey: ['proyectos'] });
+        queryClient.invalidateQueries({ queryKey: ['proyecto', proyectoId] });
+        queryClient.invalidateQueries({ queryKey: ['tareas', proyectoId] });
+        queryClient.invalidateQueries({ queryKey: ['arbol-tareas', proyectoId] });
+        queryClient.invalidateQueries({ queryKey: ['kpi', proyectoId] });
+        queryClient.invalidateQueries({ queryKey: ['kpi-mediciones', proyectoId] });
+        queryClient.invalidateQueries({ queryKey: ['lineas-base', proyectoId] });
+        queryClient.invalidateQueries({ queryKey: ['dependencias', proyectoId] });
+        queryClient.invalidateQueries({ queryKey: ['hitos', proyectoId] });
+      }
+      notifications.show({
+        color: 'green',
+        title: 'Solicitud aprobada',
+        message: 'La solicitud de cambio fue aprobada y el plan fue actualizado.',
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        title: 'No se pudo aprobar la solicitud',
+        message: error.message,
+      });
+    },
+  });
+}
+
+export function useRechazarSolicitudCambio(solicitudId: number, proyectoId?: number) {
+  const queryClient = useQueryClient();
+  return useMutation<DetalleSolicitudCambio, ErrorSolicitud, EntradaRechazarSolicitud>({
+    mutationFn: (datos) =>
+      solicitar<DetalleSolicitudCambio>(`/solicitudes-cambio/${solicitudId}/rechazar`, {
+        method: 'POST',
+        body: JSON.stringify(datos),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['solicitudes-cambio'] });
+      queryClient.invalidateQueries({ queryKey: ['solicitud-cambio', solicitudId] });
+      queryClient.invalidateQueries({ queryKey: ['impactos-cambio', solicitudId] });
+      if (proyectoId) {
+        queryClient.invalidateQueries({ queryKey: ['proyectos'] });
+        queryClient.invalidateQueries({ queryKey: ['proyecto', proyectoId] });
+        queryClient.invalidateQueries({ queryKey: ['lineas-base', proyectoId] });
+      }
+      notifications.show({
+        color: 'green',
+        title: 'Solicitud rechazada',
+        message: 'La solicitud de cambio fue rechazada.',
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        title: 'No se pudo rechazar la solicitud',
         message: error.message,
       });
     },

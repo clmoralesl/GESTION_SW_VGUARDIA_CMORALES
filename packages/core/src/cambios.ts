@@ -292,19 +292,28 @@ export function puedeDecidir(solicitud: {
 export function decidir<T extends SolicitudParaAccion>(
   solicitud: T,
   decision: 'aprobar' | 'rechazar',
+  opciones?: { simulacion?: boolean },
 ): T {
-  if (solicitud.estado !== 'EN_EVALUACION') {
-    throw new ErrorTransicion('ESTADO_SOLICITUD_NO_PERMITE', {
-      estadoSolicitud: solicitud.estado,
-    });
-  }
-  const etapa3 = solicitud.etapas.find((e) => e.numero === 3);
-  if (etapa3?.estado !== 'COMPLETADA') {
-    throw new ErrorTransicion('ETAPA_3_PENDIENTE', {
-      estadoSolicitud: solicitud.estado,
-      etapa: 3,
-      estadoEtapa: etapa3?.estado,
-    });
+  if (opciones?.simulacion) {
+    if (solicitud.estado !== 'REGISTRADA' && solicitud.estado !== 'EN_EVALUACION') {
+      throw new ErrorTransicion('ESTADO_SOLICITUD_NO_PERMITE', {
+        estadoSolicitud: solicitud.estado,
+      });
+    }
+  } else {
+    if (solicitud.estado !== 'EN_EVALUACION') {
+      throw new ErrorTransicion('ESTADO_SOLICITUD_NO_PERMITE', {
+        estadoSolicitud: solicitud.estado,
+      });
+    }
+    const etapa3 = solicitud.etapas.find((e) => e.numero === 3);
+    if (etapa3?.estado !== 'COMPLETADA') {
+      throw new ErrorTransicion('ETAPA_3_PENDIENTE', {
+        estadoSolicitud: solicitud.estado,
+        etapa: 3,
+        estadoEtapa: etapa3?.estado,
+      });
+    }
   }
   return {
     ...solicitud,
@@ -435,3 +444,13 @@ export const esquemaActualizarAccionCorrectiva = z.strictObject({
 });
 
 export type EntradaActualizarAccionCorrectiva = z.infer<typeof esquemaActualizarAccionCorrectiva>;
+
+export const esquemaRechazarSolicitud = z.strictObject({
+  motivo: z
+    .string()
+    .trim()
+    .min(1, 'El motivo es requerido para rechazar la solicitud.')
+    .max(2000, 'El motivo no puede superar 2000 caracteres.'),
+});
+
+export type EntradaRechazarSolicitud = z.infer<typeof esquemaRechazarSolicitud>;

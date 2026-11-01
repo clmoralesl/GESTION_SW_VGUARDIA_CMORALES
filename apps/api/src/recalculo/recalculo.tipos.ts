@@ -13,6 +13,7 @@ export interface OrigenRecalculo {
   rol: Rol;
   descripcion: string;
   tareaId?: number;
+  solicitudCambioId?: number;
 }
 
 export interface ContextoRecalculo {

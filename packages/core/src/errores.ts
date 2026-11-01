@@ -41,6 +41,8 @@ export const CODIGOS_ERROR = [
   'TIPO_ARCHIVO_NO_PERMITIDO',
   'IMPACTO_INVALIDO',
   'FILTRO_INVALIDO',
+  'PROYECTO_CON_DATOS',
+  'IMPORTACION_INVALIDA',
 ] as const;
 
 export type CodigoError = (typeof CODIGOS_ERROR)[number];

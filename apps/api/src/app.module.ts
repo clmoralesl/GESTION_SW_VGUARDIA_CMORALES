@@ -15,6 +15,7 @@ import { RecalculoModule } from './recalculo/recalculo.module';
 import { SaludModule } from './salud/salud.module';
 import { SolicitudesCambioModule } from './solicitudes-cambio/solicitudes-cambio.module';
 import { TableroModule } from './tablero/tablero.module';
+import { TableroCambioModule } from './tablero-cambio/tablero-cambio.module';
 import { TareasModule } from './tareas/tareas.module';
 
 @Module({
@@ -35,6 +36,7 @@ import { TareasModule } from './tareas/tareas.module';
     KpiModule,
     SolicitudesCambioModule,
     TableroModule,
+    TableroCambioModule,
   ],
   controllers: [AppController],
 })

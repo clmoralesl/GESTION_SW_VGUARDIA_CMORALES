@@ -13,6 +13,7 @@ import { PaginaProyectos } from '../paginas/pagina-proyectos';
 import { PaginaProximamente } from '../paginas/pagina-proximamente';
 import { PaginaRecursos } from '../paginas/pagina-recursos';
 import { PaginaTableroProyecto } from '../paginas/pagina-tablero-proyecto';
+import { PaginaTableroCambio } from '../paginas/pagina-tablero-cambio';
 import { PaginaTareas } from '../paginas/pagina-tareas';
 import { MODULOS } from './modulos';
 
@@ -35,6 +36,8 @@ const rutasModulos = MODULOS.map((m) => ({
       <PaginaCambios />
     ) : m.ruta === 'tablero-proyecto' ? (
       <PaginaTableroProyecto />
+    ) : m.ruta === 'tablero-cambio' ? (
+      <PaginaTableroCambio />
     ) : (
       <PaginaProximamente titulo={m.titulo} />
     ),

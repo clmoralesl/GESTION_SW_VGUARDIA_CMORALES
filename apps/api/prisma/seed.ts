@@ -754,6 +754,14 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
       impactoRiesgo: 4,
       fechaRegistro: new Date('2026-10-15T11:00:00.000Z'),
       fechaDecision: new Date('2026-10-28T14:00:00.000Z'),
+      accionesCorrectivas: [
+        {
+          descripcion: 'Ajuste de calibración de escáneres',
+          responsable: 'Carlos Morales',
+          fechaCompromiso: '2026-11-20',
+          estado: EstadoAccion.PENDIENTE,
+        },
+      ],
       pasos: [
         [1, 'iniciar'],
         [1, 'completar'],
@@ -893,18 +901,27 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
         etapaActual: estadoModelo.etapaActual,
         fechaRegistro: def.fechaRegistro,
         fechaDecision: fechaDecisionCalculada,
-        fechaCierre: fechaCierreCalculada,
+        fechaCierre: def.fechaCierre ?? fechaCierreCalculada,
         motivoRechazo: def.motivoRechazo,
       },
     });
 
     for (const etapaMod of estadoModelo.etapas) {
+      let fechaInicioSeed: Date | null = null;
+      let fechaFinSeed: Date | null = null;
+      if (def.codigo === 'SC-001' && etapaMod.numero === 1) {
+        fechaInicioSeed = fechaIsoADate('2026-10-26');
+        fechaFinSeed = fechaIsoADate('2026-10-30');
+      }
+
       const creadaEtapa = await prisma.etapaCambio.create({
         data: {
           solicitudId: solicitud.id,
           numero: etapaMod.numero,
           nombre: NOMBRES_ETAPAS[etapaMod.numero] ?? `Etapa ${etapaMod.numero}`,
           estado: etapaMod.estado as EstadoEtapa,
+          fechaInicio: fechaInicioSeed,
+          fechaFin: fechaFinSeed,
           fechaIniciada: etapaMod.fechaIniciada
             ? fechaIsoADate(String(etapaMod.fechaIniciada).slice(0, 10))
             : null,
@@ -919,7 +936,12 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
         },
       });
 
-      if (def.accionesCorrectivas && etapaMod.numero === 9) {
+      const debeCrearAcciones =
+        def.accionesCorrectivas &&
+        ((def.codigo === 'SC-005' && etapaMod.numero === 9) ||
+          (def.codigo === 'SC-003' && etapaMod.numero === 4));
+
+      if (debeCrearAcciones && def.accionesCorrectivas) {
         for (const ac of def.accionesCorrectivas) {
           await prisma.accionCorrectiva.create({
             data: {
@@ -1524,6 +1546,187 @@ async function sembrarKpis(): Promise<void> {
         { semaforo: Semaforo.VERDE, valorDesde: 0 },
         { semaforo: Semaforo.AMARILLO, valorDesde: 10 },
       ],
+      esAdicional: false,
+    },
+    {
+      codigo: 'CAMBIO_TOTAL',
+      nombre: 'Total de solicitudes de cambio',
+      descripcion: 'Cantidad total de solicitudes de cambio registradas en el proyecto.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_TOTAL',
+      unidad: UnidadKpi.NUMERO,
+      meta: 5,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 5 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 8 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_TASA_APROBACION',
+      nombre: 'Tasa de aprobación de cambios',
+      descripcion: 'Porcentaje de solicitudes aprobadas respecto a las decididas.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_APROBADAS / (SC_APROBADAS + SC_RECHAZADAS) * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 70,
+      direccion: DireccionKpi.MAYOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 60 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 40 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_TASA_RECHAZO',
+      nombre: 'Tasa de rechazo de cambios',
+      descripcion: 'Porcentaje de solicitudes rechazadas respecto al total.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_RECHAZADAS / SC_TOTAL * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 20,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 20 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 35 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_PCT_ABIERTAS',
+      nombre: 'Porcentaje de solicitudes abiertas',
+      descripcion: 'Porcentaje de solicitudes abiertas respecto al total.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_ABIERTAS / SC_TOTAL * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 40,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 40 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 70 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_TIEMPO_CICLO',
+      nombre: 'Tiempo de ciclo promedio',
+      descripcion: 'Promedio de días corridos desde el registro hasta el cierre.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_TIEMPO_CICLO_PROM',
+      unidad: UnidadKpi.DIAS,
+      meta: 30,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: true,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 30 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 45 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_TIEMPO_EVALUACION',
+      nombre: 'Tiempo de evaluación promedio',
+      descripcion: 'Promedio de días corridos desde el inicio de evaluación hasta la decisión.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_TIEMPO_EVAL_PROM',
+      unidad: UnidadKpi.DIAS,
+      meta: 10,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 10 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 15 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_ETAPAS_VENCIDAS',
+      nombre: 'Etapas de cambio vencidas',
+      descripcion: 'Cantidad de etapas en curso con fecha de fin superada.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_ETAPAS_VENCIDAS',
+      unidad: UnidadKpi.NUMERO,
+      meta: 0,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 0 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 2 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_IMPACTO_COSTO',
+      nombre: 'Impacto total en costo',
+      descripcion: 'Suma de variaciones en costo planificado por cambios aprobados.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_IMPACTO_COSTO_TOTAL',
+      unidad: UnidadKpi.CLP,
+      meta: 500000,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 500000 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 1000000 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_IMPACTO_PLAZO',
+      nombre: 'Impacto total en plazo',
+      descripcion: 'Suma de variaciones en días hábiles de la fecha final del proyecto.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_IMPACTO_DIAS_TOTAL',
+      unidad: UnidadKpi.DIAS,
+      meta: 5,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 5 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 10 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_PCT_ACCIONES_CERRADAS',
+      nombre: 'Porcentaje de acciones correctivas cerradas',
+      descripcion: 'Porcentaje de acciones correctivas en estado cerrada.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_ACC_CORRECTIVAS_CERRADAS / SC_ACC_CORRECTIVAS_TOTAL * 100',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 100,
+      direccion: DireccionKpi.MAYOR_MEJOR,
+      esAdicional: true,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 80 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 50 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_INDICE_ADOPCION',
+      nombre: 'Índice de adopción promedio',
+      descripcion: 'Porcentaje de adopción promedio registrado en las etapas.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_ADOPCION_PROM',
+      unidad: UnidadKpi.PORCENTAJE,
+      meta: 90,
+      direccion: DireccionKpi.MAYOR_MEJOR,
+      esAdicional: true,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 80 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 60 },
+      ],
+    },
+    {
+      codigo: 'CAMBIO_RIESGO_ALTO',
+      nombre: 'Solicitudes con riesgo alto o crítico',
+      descripcion: 'Cantidad de solicitudes abiertas con nivel de riesgo alto o crítico.',
+      ambito: AmbitoKpi.CAMBIO,
+      formula: 'SC_RIESGO_ALTO',
+      unidad: UnidadKpi.NUMERO,
+      meta: 0,
+      direccion: DireccionKpi.MENOR_MEJOR,
+      esAdicional: false,
+      umbrales: [
+        { semaforo: Semaforo.VERDE, valorDesde: 0 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 1 },
+      ],
     },
   ];
 
@@ -1539,7 +1742,7 @@ async function sembrarKpis(): Promise<void> {
         unidad: def.unidad,
         meta: new Prisma.Decimal(def.meta),
         direccion: def.direccion,
-        esAdicional: false,
+        esAdicional: def.esAdicional ?? false,
         activo: true,
       },
       update: {
@@ -1550,6 +1753,7 @@ async function sembrarKpis(): Promise<void> {
         unidad: def.unidad,
         meta: new Prisma.Decimal(def.meta),
         direccion: def.direccion,
+        esAdicional: def.esAdicional ?? false,
       },
     });
 

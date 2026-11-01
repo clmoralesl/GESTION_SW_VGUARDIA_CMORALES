@@ -2,6 +2,7 @@ import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ActualizarKpi,
+  AmbitoKpi,
   CrearKpi,
   KpiDetalleRespuesta,
   KpiMedicionRespuesta,
@@ -30,11 +31,11 @@ export function useKpis() {
   });
 }
 
-export function useKpisProyecto(proyectoId: number | null) {
+export function useKpisProyecto(proyectoId: number | null, ambito: AmbitoKpi = 'PROYECTO') {
   return useQuery<KpiProyectoResumen[]>({
-    queryKey: ['kpis-proyecto', proyectoId],
+    queryKey: ['kpis-proyecto', proyectoId, ambito],
     queryFn: ({ signal }) =>
-      solicitar<KpiProyectoResumen[]>(`/proyectos/${proyectoId}/kpi`, { signal }),
+      solicitar<KpiProyectoResumen[]>(`/proyectos/${proyectoId}/kpi?ambito=${ambito}`, { signal }),
     enabled: Boolean(proyectoId),
     staleTime: 10_000,
   });
@@ -75,9 +76,10 @@ export function useValidarFormula(
   formula: string,
   proyectoId?: number | null,
   fechaCorte?: string | null,
+  ambito?: AmbitoKpi,
 ) {
   return useQuery<ValidarFormulaResultado>({
-    queryKey: ['validar-formula', formula, proyectoId, fechaCorte],
+    queryKey: ['validar-formula', formula, proyectoId, fechaCorte, ambito],
     queryFn: ({ signal }) =>
       solicitar<ValidarFormulaResultado>('/kpi/validar-formula', {
         signal,
@@ -86,6 +88,7 @@ export function useValidarFormula(
           formula,
           proyectoId: proyectoId ?? undefined,
           fechaCorte: fechaCorte ?? undefined,
+          ambito: ambito ?? undefined,
         }),
       }),
     enabled: Boolean(formula.trim()),

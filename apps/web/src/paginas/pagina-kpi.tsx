@@ -1,7 +1,17 @@
 import { useMemo, useState } from 'react';
-import { Alert, Center, Container, Group, Loader, Stack, Text, Title } from '@mantine/core';
+import {
+  Alert,
+  Center,
+  Container,
+  Group,
+  Loader,
+  SegmentedControl,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import { IconInfoCircle, IconPlus } from '@tabler/icons-react';
-import { type KpiDetalleRespuesta } from '@autofix/core';
+import type { AmbitoKpi, KpiDetalleRespuesta } from '@autofix/core';
 import { useKpis, useKpisProyecto } from '../api/kpi';
 import { useProyecto } from '../api/proyectos';
 import { BotonProtegido } from '../componentes/boton-protegido';
@@ -14,6 +24,8 @@ export function PaginaKpi() {
   const { proyectoActivoId } = useSesion();
   const { data: proyecto } = useProyecto(proyectoActivoId ?? 0);
 
+  const [ambitoSeleccionado, setAmbitoSeleccionado] = useState<AmbitoKpi>('PROYECTO');
+
   const {
     data: kpiDefiniciones,
     isLoading: cargandoDefiniciones,
@@ -24,7 +36,7 @@ export function PaginaKpi() {
     data: kpiProyecto,
     isLoading: cargandoProyecto,
     error: errorProyecto,
-  } = useKpisProyecto(proyectoActivoId);
+  } = useKpisProyecto(proyectoActivoId, ambitoSeleccionado);
 
   const [modalFormulario, setModalFormulario] = useState<{
     abierto: boolean;
@@ -47,9 +59,10 @@ export function PaginaKpi() {
   const filas = useMemo((): FilaKpiTabla[] => {
     if (!kpiDefiniciones) return [];
 
+    const definicionesAmbito = kpiDefiniciones.filter((def) => def.ambito === ambitoSeleccionado);
     const resumenesPorKpiId = new Map((kpiProyecto ?? []).map((r) => [r.kpiId, r]));
 
-    return kpiDefiniciones.map((def) => {
+    return definicionesAmbito.map((def) => {
       const resumen = resumenesPorKpiId.get(def.id);
       return {
         id: def.id,
@@ -69,7 +82,7 @@ export function PaginaKpi() {
         esAdicional: def.esAdicional,
       };
     });
-  }, [kpiDefiniciones, kpiProyecto]);
+  }, [kpiDefiniciones, kpiProyecto, ambitoSeleccionado]);
 
   const alAbrirCrear = () => {
     setModalFormulario({ abierto: true, kpiParaEditar: null });
@@ -103,6 +116,15 @@ export function PaginaKpi() {
           </BotonProtegido>
         </Group>
 
+        <SegmentedControl
+          value={ambitoSeleccionado}
+          onChange={(val) => setAmbitoSeleccionado(val as AmbitoKpi)}
+          data={[
+            { label: 'Proyecto', value: 'PROYECTO' },
+            { label: 'Gestión del cambio', value: 'CAMBIO' },
+          ]}
+        />
+
         {!proyectoActivoId ? (
           <Alert color="blue" icon={<IconInfoCircle size={16} />}>
             Seleccione un proyecto en la cabecera superior para visualizar los valores calculados y
@@ -129,6 +151,7 @@ export function PaginaKpi() {
           alCerrar={() => setModalFormulario({ abierto: false, kpiParaEditar: null })}
           kpiParaEditar={modalFormulario.kpiParaEditar}
           proyectoId={proyectoActivoId}
+          ambitoInicial={ambitoSeleccionado}
         />
 
         <GraficoHistorialKpi

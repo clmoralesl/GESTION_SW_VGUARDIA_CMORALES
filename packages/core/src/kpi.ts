@@ -138,6 +138,7 @@ export type ActualizarKpi = z.infer<typeof esquemaActualizarKpi>;
 
 export const esquemaValidarFormula = z.strictObject({
   formula: z.string({ error: 'Ingrese la fórmula.' }).trim().min(1, 'Ingrese la fórmula.'),
+  ambito: z.enum(AMBITOS_KPI, { error: 'Seleccione un ámbito válido.' }).optional(),
   proyectoId: z
     .number()
     .int('El identificador de proyecto debe ser un entero.')

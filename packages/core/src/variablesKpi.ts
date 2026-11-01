@@ -18,11 +18,13 @@ import {
   type HojaActual,
 } from './valorGanado';
 
+export type AmbitoVariableKpi = 'PROYECTO' | 'CAMBIO';
+
 export interface VariableKpiDefinicion {
   codigo: string;
   nombre: string;
   descripcion: string;
-  ambito: 'PROYECTO';
+  ambito: AmbitoVariableKpi;
   unidad: 'CLP' | 'PORCENTAJE' | 'NUMERO' | 'DIAS' | 'INDICE';
 }
 
@@ -132,7 +134,109 @@ export const VARIABLES_KPI: readonly VariableKpiDefinicion[] = [
     ambito: 'PROYECTO',
     unidad: 'NUMERO',
   },
+  {
+    codigo: 'SC_TOTAL',
+    nombre: 'Total de solicitudes de cambio',
+    descripcion: 'Cantidad total de solicitudes de cambio del proyecto.',
+    ambito: 'CAMBIO',
+    unidad: 'NUMERO',
+  },
+  {
+    codigo: 'SC_APROBADAS',
+    nombre: 'Solicitudes aprobadas',
+    descripcion: 'Cantidad de solicitudes de cambio aprobadas, implementadas o cerradas.',
+    ambito: 'CAMBIO',
+    unidad: 'NUMERO',
+  },
+  {
+    codigo: 'SC_RECHAZADAS',
+    nombre: 'Solicitudes rechazadas',
+    descripcion: 'Cantidad de solicitudes de cambio en estado rechazada.',
+    ambito: 'CAMBIO',
+    unidad: 'NUMERO',
+  },
+  {
+    codigo: 'SC_ABIERTAS',
+    nombre: 'Solicitudes abiertas',
+    descripcion: 'Cantidad de solicitudes de cambio no terminales (ni rechazadas ni cerradas).',
+    ambito: 'CAMBIO',
+    unidad: 'NUMERO',
+  },
+  {
+    codigo: 'SC_TIEMPO_CICLO_PROM',
+    nombre: 'Tiempo de ciclo promedio',
+    descripcion:
+      'Promedio de días corridos desde el registro hasta el cierre de las solicitudes cerradas.',
+    ambito: 'CAMBIO',
+    unidad: 'DIAS',
+  },
+  {
+    codigo: 'SC_TIEMPO_EVAL_PROM',
+    nombre: 'Tiempo de evaluación promedio',
+    descripcion:
+      'Promedio de días corridos desde la etapa inicial hasta la decisión en solicitudes decididas.',
+    ambito: 'CAMBIO',
+    unidad: 'DIAS',
+  },
+  {
+    codigo: 'SC_ETAPAS_VENCIDAS',
+    nombre: 'Etapas vencidas',
+    descripcion: 'Cantidad de etapas en curso con fecha de fin anterior a la fecha de corte.',
+    ambito: 'CAMBIO',
+    unidad: 'NUMERO',
+  },
+  {
+    codigo: 'SC_IMPACTO_COSTO_TOTAL',
+    nombre: 'Impacto total en costo',
+    descripcion:
+      'Suma de variaciones de costo planificado introducidas por las solicitudes aprobadas.',
+    ambito: 'CAMBIO',
+    unidad: 'CLP',
+  },
+  {
+    codigo: 'SC_IMPACTO_DIAS_TOTAL',
+    nombre: 'Impacto total en plazo',
+    descripcion:
+      'Suma de días hábiles de variación en la fecha de fin del proyecto introducidos por las solicitudes aprobadas.',
+    ambito: 'CAMBIO',
+    unidad: 'DIAS',
+  },
+  {
+    codigo: 'SC_ACC_CORRECTIVAS_TOTAL',
+    nombre: 'Total de acciones correctivas',
+    descripcion: 'Cantidad total de acciones correctivas registradas en las etapas de cambio.',
+    ambito: 'CAMBIO',
+    unidad: 'NUMERO',
+  },
+  {
+    codigo: 'SC_ACC_CORRECTIVAS_CERRADAS',
+    nombre: 'Acciones correctivas cerradas',
+    descripcion: 'Cantidad de acciones correctivas en estado cerrada.',
+    ambito: 'CAMBIO',
+    unidad: 'NUMERO',
+  },
+  {
+    codigo: 'SC_ADOPCION_PROM',
+    nombre: 'Porcentaje de adopción promedio',
+    descripcion: 'Promedio del porcentaje de adopción registrado en las etapas de cambio.',
+    ambito: 'CAMBIO',
+    unidad: 'PORCENTAJE',
+  },
+  {
+    codigo: 'SC_RIESGO_ALTO',
+    nombre: 'Solicitudes de riesgo alto',
+    descripcion: 'Cantidad de solicitudes abiertas con nivel de riesgo alto o crítico.',
+    ambito: 'CAMBIO',
+    unidad: 'NUMERO',
+  },
 ] as const;
+
+export function codigosVariablesPorAmbito(ambito: string): ReadonlySet<string> {
+  if (ambito === 'CAMBIO') {
+    return new Set(VARIABLES_KPI.filter((v) => v.ambito === 'CAMBIO').map((v) => v.codigo));
+  }
+  return new Set(VARIABLES_KPI.filter((v) => v.ambito === 'PROYECTO').map((v) => v.codigo));
+}
 
 export const CODIGOS_VARIABLES_KPI: ReadonlySet<string> = new Set(
   VARIABLES_KPI.map((v) => v.codigo),
@@ -358,10 +462,12 @@ export function calcularVariablesKpi(datos: DatosCalculoVariablesKpi): Resultado
     HORAS_SOBREASIGNADAS: horasSobreasignadas,
   };
 
-  const variables: VariableKpiConValor[] = VARIABLES_KPI.map((v) => ({
-    ...v,
-    valor: valores[v.codigo] ?? null,
-  }));
+  const variables: VariableKpiConValor[] = VARIABLES_KPI.filter((v) => v.ambito === 'PROYECTO').map(
+    (v) => ({
+      ...v,
+      valor: valores[v.codigo] ?? null,
+    }),
+  );
 
   return {
     corte: datos.corte,

@@ -175,6 +175,11 @@ export function TablaKpi({ filas, alVerGrafico, alEditar }: TablaKpiProps) {
                         >
                           {fila.codigo}
                         </Badge>
+                        {fila.esAdicional ? (
+                          <Badge size="xs" color="teal" variant="light">
+                            Adicional
+                          </Badge>
+                        ) : null}
                         {!fila.activo ? (
                           <Badge size="xs" color="gray" variant="light">
                             Inactivo

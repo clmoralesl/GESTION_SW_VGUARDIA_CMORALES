@@ -34,6 +34,7 @@ import { cargarCalendarioLaboral } from '../calendario/calendario-laboral';
 import { cargarDatosVariablesKpi } from '../kpi/datos-variables-kpi';
 import { calcularVariablesKpi } from '@autofix/core';
 import { RecalculoService } from '../recalculo/recalculo.service';
+import { PasoKpi } from '../recalculo/paso-kpi';
 import { crearLineaBase } from '../lineas-base/crear-linea-base';
 
 export interface DetalleImpacto {
@@ -121,6 +122,7 @@ export class CambioAplicadorService {
     private readonly recalculo: RecalculoService,
     private readonly bitacora: BitacoraService,
     private readonly reloj: Reloj,
+    private readonly pasoKpi: PasoKpi,
   ) {}
 
   private mapearImpacto(impacto: {
@@ -1367,6 +1369,8 @@ export class CambioAplicadorService {
           cambios,
           datos.motivo,
         );
+
+        await this.pasoKpi.medirAmbitoCambio(tx, solicitud.proyectoId);
 
         return actualizada;
       },

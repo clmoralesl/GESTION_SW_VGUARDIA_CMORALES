@@ -18,6 +18,7 @@ import {
   PERMISOS,
   z,
   type ActualizarKpi,
+  type AmbitoKpi,
   type ConsultaVariablesKpi,
   type CrearKpi,
   type KpiDetalleRespuesta,
@@ -33,6 +34,16 @@ import { PipeValidacionZod } from '../comun/validacion/validacion-zod.pipe';
 import { KpiService } from './kpi.service';
 
 const esquemaLimite = z.coerce.number().int().min(1).max(500).default(100);
+
+const esquemaConsultaKpiProyecto = z.strictObject({
+  ambito: z
+    .enum(['PROYECTO', 'CAMBIO'], {
+      error: 'Seleccione un ámbito válido (PROYECTO o CAMBIO).',
+    })
+    .default('PROYECTO'),
+});
+
+type ConsultaKpiProyecto = z.infer<typeof esquemaConsultaKpiProyecto>;
 
 @Controller()
 export class KpiController {
@@ -87,8 +98,9 @@ export class KpiController {
   @Get('proyectos/:proyectoId/kpi')
   listarPorProyecto(
     @Param('proyectoId', new PipeIdRuta('proyectoId')) proyectoId: number,
+    @Query(new PipeValidacionZod(esquemaConsultaKpiProyecto)) query: ConsultaKpiProyecto,
   ): Promise<KpiProyectoResumen[]> {
-    return this.kpi.listarPorProyecto(proyectoId);
+    return this.kpi.listarPorProyecto(proyectoId, query.ambito as AmbitoKpi);
   }
 
   @Get('proyectos/:proyectoId/kpi/:kpiId/mediciones')

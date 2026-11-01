@@ -27,6 +27,7 @@ interface ModalKpiProps {
   alCerrar: () => void;
   kpiParaEditar?: KpiDetalleRespuesta | null;
   proyectoId?: number | null;
+  ambitoInicial?: AmbitoKpi;
 }
 
 const OPCIONES_AMBITO = [
@@ -47,13 +48,19 @@ const OPCIONES_DIRECCION: Array<{ value: DireccionKpi; label: string }> = [
   { value: 'MENOR_MEJOR', label: 'Menor es mejor (≤ verde)' },
 ];
 
-export function ModalKpi({ abierto, alCerrar, kpiParaEditar, proyectoId }: ModalKpiProps) {
+export function ModalKpi({
+  abierto,
+  alCerrar,
+  kpiParaEditar,
+  proyectoId,
+  ambitoInicial,
+}: ModalKpiProps) {
   const esEdicion = Boolean(kpiParaEditar);
 
   const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [ambito, setAmbito] = useState<AmbitoKpi>('PROYECTO');
+  const [ambito, setAmbito] = useState<AmbitoKpi>(ambitoInicial ?? 'PROYECTO');
   const [formula, setFormula] = useState('');
   const [unidad, setUnidad] = useState<UnidadKpi>('INDICE');
   const [meta, setMeta] = useState<number | string>('');
@@ -93,7 +100,7 @@ export function ModalKpi({ abierto, alCerrar, kpiParaEditar, proyectoId }: Modal
       setCodigo('');
       setNombre('');
       setDescripcion('');
-      setAmbito('PROYECTO');
+      setAmbito(ambitoInicial ?? 'PROYECTO');
       setFormula('');
       setUnidad('INDICE');
       setMeta('');
@@ -103,7 +110,7 @@ export function ModalKpi({ abierto, alCerrar, kpiParaEditar, proyectoId }: Modal
       setActivo(true);
     }
     setErrores({});
-  }, [kpiParaEditar, abierto]);
+  }, [kpiParaEditar, abierto, ambitoInicial]);
 
   const alGuardar = async () => {
     setErrores({});
@@ -248,6 +255,7 @@ export function ModalKpi({ abierto, alCerrar, kpiParaEditar, proyectoId }: Modal
           alCambiar={setFormula}
           unidad={unidad}
           proyectoId={proyectoId}
+          ambito={ambito}
           error={errores.formula}
           disabled={guardando}
         />

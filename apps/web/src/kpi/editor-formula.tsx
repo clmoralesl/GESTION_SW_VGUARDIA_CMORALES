@@ -15,7 +15,7 @@ import {
 } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { IconAlertCircle, IconCheck, IconCode } from '@tabler/icons-react';
-import { VARIABLES_KPI, type UnidadKpi } from '@autofix/core';
+import { VARIABLES_KPI, type AmbitoKpi, type UnidadKpi } from '@autofix/core';
 import { useValidarFormula } from '../api/kpi';
 import { formatearValorKpi } from './formato-kpi';
 
@@ -24,6 +24,7 @@ interface EditorFormulaProps {
   alCambiar: (formula: string) => void;
   unidad?: UnidadKpi;
   proyectoId?: number | null;
+  ambito?: AmbitoKpi;
   error?: string;
   disabled?: boolean;
 }
@@ -33,6 +34,7 @@ export function EditorFormula({
   alCambiar,
   unidad = 'INDICE',
   proyectoId,
+  ambito,
   error,
   disabled,
 }: EditorFormulaProps) {
@@ -44,7 +46,13 @@ export function EditorFormula({
   const { data: resultadoValidacion, isLoading: validando } = useValidarFormula(
     formulaDiferida,
     proyectoId,
+    null,
+    ambito,
   );
+
+  const variablesDelAmbito = useMemo(() => {
+    return VARIABLES_KPI.filter((v) => (ambito ? v.ambito === ambito : true));
+  }, [ambito]);
 
   const palabraBajoCursor = useMemo(() => {
     const textoPrevio = valor.slice(0, posicionCursor);
@@ -55,8 +63,8 @@ export function EditorFormula({
   const sugerencias = useMemo(() => {
     if (!palabraBajoCursor) return [];
     const busqueda = palabraBajoCursor.toUpperCase();
-    return VARIABLES_KPI.filter((v) => v.codigo.includes(busqueda));
-  }, [palabraBajoCursor]);
+    return variablesDelAmbito.filter((v) => v.codigo.includes(busqueda));
+  }, [palabraBajoCursor, variablesDelAmbito]);
 
   const insertarVariable = (codigo: string) => {
     const inicio = posicionCursor - palabraBajoCursor.length;
@@ -191,7 +199,7 @@ export function EditorFormula({
         {mostrarCatalogo ? (
           <ScrollArea.Autosize mah={180}>
             <Stack gap={4}>
-              {VARIABLES_KPI.map((v) => (
+              {variablesDelAmbito.map((v) => (
                 <Paper
                   key={v.codigo}
                   p={6}

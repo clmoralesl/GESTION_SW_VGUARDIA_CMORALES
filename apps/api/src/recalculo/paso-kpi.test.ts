@@ -72,10 +72,19 @@ describe('PasoKpi', () => {
 
     const txMock = {
       $executeRaw: vi.fn().mockResolvedValue(1),
-      lineaBase: { findFirst: vi.fn().mockResolvedValue(null) },
+      lineaBase: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      solicitudCambio: { findMany: vi.fn().mockResolvedValue([]) },
       hito: { findMany: vi.fn().mockResolvedValue([]) },
       asignacion: { findMany: vi.fn().mockResolvedValue([]) },
-      kpiDefinicion: { findMany: vi.fn().mockResolvedValue(kpisMock) },
+      kpiDefinicion: {
+        findMany: vi.fn().mockImplementation(async (args) => {
+          if (args.where?.ambito === 'CAMBIO') return [];
+          return kpisMock;
+        }),
+      },
       kpiMedicion: {
         create: vi.fn().mockImplementation(async (args) => {
           medicionesCreadas.push(args.data);
@@ -140,5 +149,54 @@ describe('PasoKpi', () => {
     expect(alertasActualizadas).toHaveLength(1);
     const primeraActualizada = alertasActualizadas[0] as { data: { activa: boolean } };
     expect(primeraActualizada.data.activa).toBe(false);
+  });
+
+  it('medirAmbitoCambio no cierra alertas activas de KPI de PROYECTO', async () => {
+    const alertasActualizadas: unknown[] = [];
+    const txMock = {
+      $executeRaw: vi.fn().mockResolvedValue(1),
+      calendario: {
+        findUnique: vi.fn().mockResolvedValue({
+          proyectoId: 1,
+          diasLaborables: [1, 2, 3, 4, 5],
+          horasPorDia: 8,
+          feriados: [],
+        }),
+      },
+      solicitudCambio: { findMany: vi.fn().mockResolvedValue([]) },
+      lineaBase: { findMany: vi.fn().mockResolvedValue([]) },
+      kpiDefinicion: {
+        findMany: vi.fn().mockImplementation(async (args) => {
+          if (args.where?.activo) return [];
+          return [{ id: 201 }];
+        }),
+      },
+      kpiMedicion: { create: vi.fn().mockResolvedValue({ id: 1 }) },
+      alerta: {
+        findMany: vi.fn().mockImplementation(async (args) => {
+          if (args.where?.tipo !== TipoAlerta.KPI) return [];
+          const alerta = {
+            id: 10,
+            proyectoId: 1,
+            tipo: TipoAlerta.KPI,
+            clave: 'KPI:101',
+            entidadId: 101,
+            activa: true,
+          };
+          const ids: number[] | undefined = args.where?.entidadId?.in;
+          return ids === undefined || ids.includes(101) ? [alerta] : [];
+        }),
+        update: vi.fn().mockImplementation(async (args) => {
+          alertasActualizadas.push(args);
+          return args;
+        }),
+        create: vi.fn().mockResolvedValue({ id: 1 }),
+      },
+    } as unknown as Prisma.TransactionClient;
+
+    const paso = new PasoKpi(relojMock);
+    await paso.medirAmbitoCambio(txMock, proyectoMock);
+
+    expect(alertasActualizadas).toHaveLength(0);
   });
 });

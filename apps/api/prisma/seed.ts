@@ -619,6 +619,65 @@ async function sembrarLineaBase(proyectoId: number): Promise<void> {
       `Conteo inesperado de tareas en línea base: ${lb.tareas.length} (esperado: 14)`,
     );
   }
+
+  const sc003 = await prisma.solicitudCambio.findFirst({
+    where: { proyectoId, codigo: 'SC-003' },
+  });
+
+  if (sc003) {
+    const tareasV2 = tareas.map((t) => {
+      if (t.codigo === '1.2.1') {
+        const finPlanV2 = fechaIsoADate('2026-11-18');
+        return {
+          tareaId: t.id,
+          codigo: t.codigo,
+          nombre: t.nombre,
+          nivel: t.nivel,
+          duracionDias: t.duracionDias + 3,
+          inicioPlan: t.inicioPlan,
+          finPlan: finPlanV2,
+          costoPlan: new Prisma.Decimal(Number(t.costoPlan) + 300000),
+        };
+      }
+      if (t.codigo === '1.2' || t.codigo === '1') {
+        const finPlanV2 = fechaIsoADate('2026-11-18');
+        return {
+          tareaId: t.id,
+          codigo: t.codigo,
+          nombre: t.nombre,
+          nivel: t.nivel,
+          duracionDias: t.duracionDias,
+          inicioPlan: t.inicioPlan,
+          finPlan: finPlanV2,
+          costoPlan: new Prisma.Decimal(Number(t.costoPlan) + 300000),
+        };
+      }
+      return {
+        tareaId: t.id,
+        codigo: t.codigo,
+        nombre: t.nombre,
+        nivel: t.nivel,
+        duracionDias: t.duracionDias,
+        inicioPlan: t.inicioPlan,
+        finPlan: t.finPlan,
+        costoPlan: t.costoPlan,
+      };
+    });
+
+    await prisma.lineaBase.create({
+      data: {
+        proyectoId,
+        version: 2,
+        descripcion: 'Aprobación de cambio SC-003',
+        solicitudCambioId: sc003.id,
+        fechaFinProyecto: fechaIsoADate('2026-12-15'),
+        costoPlanTotal: new Prisma.Decimal(costoPlanTotal + 300000),
+        tareas: {
+          create: tareasV2,
+        },
+      },
+    });
+  }
 }
 
 async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
@@ -873,6 +932,53 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
             },
           });
         }
+      }
+    }
+
+    if (def.codigo === 'SC-002') {
+      const tarea121 = await prisma.tarea.findFirst({
+        where: { proyectoId, codigo: '1.2.1' },
+      });
+      const profDiego = await prisma.profesional.findFirst({
+        where: { claveNombre: 'diego pizarro' },
+      });
+      if (tarea121) {
+        await prisma.impactoCambio.create({
+          data: {
+            solicitudId: solicitud.id,
+            tipo: 'DURACION',
+            tareaId: tarea121.id,
+            descripcion: 'Aumento de 3 días en desarrollo de interfaz',
+            datos: { duracionDias: tarea121.duracionDias + 3 },
+            aplicado: false,
+          },
+        });
+        if (profDiego) {
+          await prisma.impactoCambio.create({
+            data: {
+              solicitudId: solicitud.id,
+              tipo: 'ASIGNACION',
+              tareaId: tarea121.id,
+              descripcion: 'Asignación de soporte técnico a interfaz',
+              datos: {
+                operacion: 'agregar',
+                elemento: 'PROFESIONAL',
+                profesionalId: profDiego.id,
+                dedicacion: 40,
+              },
+              aplicado: false,
+            },
+          });
+        }
+        await prisma.impactoCambio.create({
+          data: {
+            solicitudId: solicitud.id,
+            tipo: 'PRESUPUESTO',
+            descripcion: 'Aumento de presupuesto por nuevas funcionalidades',
+            datos: { presupuesto: 48000000 },
+            aplicado: false,
+          },
+        });
       }
     }
   }
@@ -1585,8 +1691,8 @@ async function sembrar(): Promise<void> {
     await sembrarHitos(proyectoPrincipalId);
     await sembrarAsignaciones(proyectoPrincipalId);
     await recalcularCostosSemilla(proyectoPrincipalId);
-    await sembrarLineaBase(proyectoPrincipalId);
     await sembrarSolicitudesCambio(proyectoPrincipalId);
+    await sembrarLineaBase(proyectoPrincipalId);
   }
 
   if (proyectoDemoId) {

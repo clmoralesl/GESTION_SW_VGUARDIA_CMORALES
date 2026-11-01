@@ -7,6 +7,7 @@ import { PaginaDetalleProyecto } from '../paginas/pagina-detalle-proyecto';
 import { PaginaGantt } from '../paginas/pagina-gantt';
 import { PaginaHitos } from '../paginas/pagina-hitos';
 import { PaginaKpi } from '../paginas/pagina-kpi';
+import { PaginaLineasBase } from '../paginas/pagina-lineas-base';
 import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
 import { PaginaProximamente } from '../paginas/pagina-proximamente';
@@ -53,6 +54,10 @@ export const enrutador = createBrowserRouter([
       {
         path: 'proyectos/:proyectoId/calendario',
         element: <PaginaCalendario />,
+      },
+      {
+        path: 'proyectos/:proyectoId/lineas-base',
+        element: <PaginaLineasBase />,
       },
       {
         path: 'proyectos/:proyectoId',

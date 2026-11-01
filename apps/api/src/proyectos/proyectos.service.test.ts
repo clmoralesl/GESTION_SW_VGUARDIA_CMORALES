@@ -48,6 +48,17 @@ describe('ProyectosService', () => {
         findMany: vi.fn().mockResolvedValue([]),
         count: vi.fn().mockResolvedValue(0),
       },
+      lineaBase: {
+        count: vi.fn().mockResolvedValue(0),
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({
+          id: 1,
+          version: 1,
+          proyectoId: 1,
+          descripcion: 'Línea base inicial',
+          tareas: [],
+        }),
+      },
     } as unknown as PrismaService;
 
     const servicio = new ProyectosService(prismaMock, bitacoraMock, recalculoMock);
@@ -162,6 +173,7 @@ describe('ProyectosService', () => {
         'ACTUALIZAR',
         [{ campo: 'estado', anterior: 'PLANIFICADO', nuevo: 'EN_CURSO' }],
       );
+      expect(prismaMock.lineaBase.create).toHaveBeenCalled();
     });
 
     it('cambia de EN_CURSO a CERRADO y registra CERRAR en bitacora', async () => {

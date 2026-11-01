@@ -14,7 +14,7 @@ import {
 import { useCalendario } from '../api/calendario';
 import { useDependencias } from '../api/dependencias';
 import { useHitos } from '../api/hitos';
-import { useLineaBaseVigente } from '../api/lineas-base';
+import { useLineaBasePorVersion, useLineasBase, useLineaBaseVigente } from '../api/lineas-base';
 import { useProyecto } from '../api/proyectos';
 import { useActualizarTarea, useArbolTareas } from '../api/tareas';
 import { BarraHerramientasGantt } from '../gantt/barra-herramientas-gantt';
@@ -42,6 +42,19 @@ export function PaginaGantt() {
   const { data: hitosData, isLoading: cargandoHitos } = useHitos(proyectoActivoId);
   const { data: calendarioData, isLoading: cargandoCal } = useCalendario(proyectoActivoId);
   const { data: lineaBaseData, isLoading: cargandoLb } = useLineaBaseVigente(proyectoActivoId);
+  const { data: listaLineasBase } = useLineasBase(proyectoActivoId);
+  const [versionSeleccionada, setVersionSeleccionada] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (listaLineasBase?.versionGantt !== undefined && listaLineasBase.versionGantt !== null) {
+      setVersionSeleccionada((prev) => prev ?? listaLineasBase.versionGantt);
+    }
+  }, [listaLineasBase?.versionGantt]);
+
+  const { data: lineaBasePorVersionData } = useLineaBasePorVersion(
+    proyectoActivoId,
+    versionSeleccionada,
+  );
 
   const actualizarTarea = useActualizarTarea(proyectoActivoId ?? 0);
   const { puede, motivoBloqueo } = usePermisos();
@@ -73,7 +86,10 @@ export function PaginaGantt() {
       colapsadas,
       dependencias: dependencias ?? [],
       hitos: hitosData?.hitos ?? [],
-      lineaBase: lineaBaseData?.lineaBase ?? null,
+      lineaBase:
+        versionSeleccionada !== null && lineaBasePorVersionData
+          ? lineaBasePorVersionData
+          : (lineaBaseData?.lineaBase ?? null),
       calendario: calLaboral,
       hoy: hoyCalculo,
       zoom,
@@ -85,6 +101,8 @@ export function PaginaGantt() {
     dependencias,
     hitosData,
     lineaBaseData,
+    lineaBasePorVersionData,
+    versionSeleccionada,
     calLaboral,
     hoyCalculo,
     zoom,
@@ -386,7 +404,13 @@ export function PaginaGantt() {
             alCambiarRutaCritica={setRutaCriticaActiva}
             lineaBaseActiva={lineaBaseActiva}
             alCambiarLineaBase={setLineaBaseActiva}
-            tieneLineaBase={Boolean(lineaBaseData?.lineaBase)}
+            tieneLineaBase={Boolean(
+              lineaBaseData?.lineaBase ||
+              (listaLineasBase?.versiones && listaLineasBase.versiones.length > 0),
+            )}
+            versiones={listaLineasBase?.versiones}
+            versionSeleccionada={versionSeleccionada}
+            alCambiarVersion={(v) => setVersionSeleccionada(v)}
             alExportarPng={alExportarPng}
             alExportarPdf={alExportarPdf}
             exportando={exportando}

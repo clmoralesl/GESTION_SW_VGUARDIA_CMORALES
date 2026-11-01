@@ -32,6 +32,9 @@ import {
   type EstadoSolicitud,
   type NivelRiesgo,
   type PrioridadSolicitud,
+  type EntradaCrearImpacto,
+  type EntradaRechazarSolicitud,
+  type ResultadoSimulacion,
   type Rol,
   type TipoAccionEtapa,
 } from '@autofix/core';
@@ -45,6 +48,7 @@ import { Reloj } from '../comun/reloj/reloj';
 import { ROL_BD } from '../comun/roles/rol-bd';
 import { PrismaService } from '../prisma/prisma.service';
 import { obtenerProyectoAbierto } from '../proyectos/proyecto-abierto';
+import { CambioAplicadorService, type DetalleImpacto } from './cambio-aplicador.service';
 
 const ESTADOS_TERMINALES_SOLICITUD: readonly EstadoSolicitudPrisma[] = [
   EstadoSolicitudPrisma.RECHAZADA,
@@ -128,6 +132,7 @@ export class SolicitudesCambioService {
     private readonly prisma: PrismaService,
     private readonly bitacora: BitacoraService,
     private readonly reloj: Reloj,
+    private readonly aplicador: CambioAplicadorService,
   ) {
     this.rutaUploads = process.env.RUTA_UPLOADS || path.resolve(process.cwd(), 'uploads');
   }
@@ -1207,5 +1212,38 @@ export class SolicitudesCambioService {
 
       return this.mapearAccion(actualizada);
     });
+  }
+
+  async listarImpactos(solicitudId: number): Promise<DetalleImpacto[]> {
+    return this.aplicador.listarImpactos(solicitudId);
+  }
+
+  async crearImpacto(
+    solicitudId: number,
+    datos: EntradaCrearImpacto,
+    rol: Rol,
+  ): Promise<DetalleImpacto> {
+    return this.aplicador.crearImpacto(solicitudId, datos, rol);
+  }
+
+  async eliminarImpacto(impactoId: number, rol: Rol): Promise<void> {
+    return this.aplicador.eliminarImpacto(impactoId, rol);
+  }
+
+  async simular(solicitudId: number, rol: Rol): Promise<ResultadoSimulacion> {
+    return this.aplicador.simular(solicitudId, rol);
+  }
+
+  async aprobar(solicitudId: number, rol: Rol): Promise<ResultadoSimulacion> {
+    return this.aplicador.aprobar(solicitudId, rol);
+  }
+
+  async rechazar(
+    solicitudId: number,
+    datos: EntradaRechazarSolicitud,
+    rol: Rol,
+  ): Promise<DetalleSolicitudCambio> {
+    const actualizada = await this.aplicador.rechazar(solicitudId, datos, rol);
+    return this.mapearSolicitud(actualizada, this.reloj.hoy());
   }
 }

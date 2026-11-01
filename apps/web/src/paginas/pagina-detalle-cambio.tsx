@@ -12,6 +12,7 @@ import {
   Loader,
   Modal,
   Stack,
+  Tabs,
   Text,
   Title,
   Tooltip,
@@ -24,10 +25,17 @@ import {
   type NivelRiesgo,
   type PrioridadSolicitud,
 } from '@autofix/core';
-import { useActualizarSolicitudCambio, useSolicitudCambio } from '../api/cambios';
+import {
+  useActualizarSolicitudCambio,
+  useImpactosCambio,
+  useSolicitudCambio,
+} from '../api/cambios';
+import { AccionesDecisionCambio } from '../cambios/acciones-decision-cambio';
 import { FormularioSolicitud } from '../cambios/formulario-solicitud';
 import { LineaTiempoEtapas } from '../cambios/linea-tiempo-etapas';
 import { PanelEtapa } from '../cambios/panel-etapa';
+import { PanelSimulacion } from '../cambios/panel-simulacion';
+import { TablaImpactos } from '../cambios/tabla-impactos';
 import { usePermisos } from '../sesion/use-permisos';
 
 const colorPorEstado: Record<EstadoSolicitud, string> = {
@@ -60,6 +68,7 @@ export function PaginaDetalleCambio() {
   const { puede, motivoBloqueo } = usePermisos();
 
   const { data: solicitud, isLoading, isError, error } = useSolicitudCambio(idNumero);
+  const { data: impactos } = useImpactosCambio(idNumero);
 
   const [etapaSeleccionadaNumero, setEtapaSeleccionadaNumero] = useState<number | null>(null);
   const [modalEditar, setModalEditar] = useState(false);
@@ -257,13 +266,39 @@ export function PaginaDetalleCambio() {
           </Stack>
         </Card>
 
-        <LineaTiempoEtapas
-          etapas={solicitud.etapas}
-          etapaSeleccionada={etapaActiva?.numero ?? 1}
-          onSeleccionarEtapa={(num) => setEtapaSeleccionadaNumero(num)}
-        />
+        <Tabs defaultValue="etapas">
+          <Tabs.List mb="md">
+            <Tabs.Tab value="etapas">Etapas del cambio (10)</Tabs.Tab>
+            <Tabs.Tab value="impactos">Impactos y Aprobación ({impactos?.length ?? 0})</Tabs.Tab>
+          </Tabs.List>
 
-        {etapaActiva && <PanelEtapa solicitud={solicitud} etapa={etapaActiva} />}
+          <Tabs.Panel value="etapas">
+            <Stack gap="lg">
+              <LineaTiempoEtapas
+                etapas={solicitud.etapas}
+                etapaSeleccionada={etapaActiva?.numero ?? 1}
+                onSeleccionarEtapa={(num) => setEtapaSeleccionadaNumero(num)}
+              />
+
+              {etapaActiva && <PanelEtapa solicitud={solicitud} etapa={etapaActiva} />}
+            </Stack>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="impactos">
+            <Stack gap="lg">
+              <AccionesDecisionCambio solicitud={solicitud} />
+              <PanelSimulacion solicitudId={solicitud.id} estado={solicitud.estado} />
+              <TablaImpactos
+                solicitudId={solicitud.id}
+                proyectoId={solicitud.proyectoId}
+                solicitudEstado={solicitud.estado}
+                etapa3Completada={
+                  solicitud.etapas.find((e) => e.numero === 3)?.estado === 'COMPLETADA'
+                }
+              />
+            </Stack>
+          </Tabs.Panel>
+        </Tabs>
       </Stack>
 
       <Modal

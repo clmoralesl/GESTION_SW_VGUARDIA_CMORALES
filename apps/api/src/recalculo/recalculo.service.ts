@@ -26,6 +26,10 @@ export function describirOrigen(
   return texto.slice(0, 200);
 }
 
+export interface OpcionesRecalculo {
+  antesDeKpi?: (contexto: ContextoRecalculo) => Promise<void>;
+}
+
 @Injectable()
 export class RecalculoService {
   constructor(
@@ -38,6 +42,7 @@ export class RecalculoService {
     proyectoId: number,
     tx: Prisma.TransactionClient,
     origen: OrigenRecalculo,
+    opciones?: OpcionesRecalculo,
   ): Promise<ResultadoRecalculo> {
     const proyecto = await obtenerProyectoAbierto(tx, proyectoId, { bloquear: true });
     await this.arbol.numerar(tx, proyectoId);
@@ -61,12 +66,21 @@ export class RecalculoService {
       huboCambios: false,
     };
     for (const paso of this.pasos) {
+      if (paso.nombre === 'kpi' && opciones?.antesDeKpi) {
+        await opciones.antesDeKpi(contexto);
+      }
       await paso.ejecutar(contexto);
     }
     if (contexto.huboCambios) {
       await this.bitacora.registrarRecalculo(
         tx,
-        { proyectoId, entidad: 'Proyecto', entidadId: proyectoId, rol: origen.rol },
+        {
+          proyectoId,
+          entidad: 'Proyecto',
+          entidadId: proyectoId,
+          rol: origen.rol,
+          solicitudCambioId: origen.solicitudCambioId,
+        },
         { tareasAfectadas: contexto.tareasAfectadas, ...contexto.detalle },
         describirOrigen(origen, contexto.tareas),
       );

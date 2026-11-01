@@ -18,15 +18,20 @@ import {
   esquemaActualizarEtapa,
   esquemaActualizarSolicitud,
   esquemaCrearAccionCorrectiva,
+  esquemaCrearImpacto,
   esquemaCrearSolicitud,
   esquemaOmitirEtapa,
+  esquemaRechazarSolicitud,
   PERMISOS,
   type EntradaActualizarAccionCorrectiva,
   type EntradaActualizarEtapa,
   type EntradaActualizarSolicitud,
   type EntradaCrearAccionCorrectiva,
+  type EntradaCrearImpacto,
   type EntradaCrearSolicitud,
   type EntradaOmitirEtapa,
+  type EntradaRechazarSolicitud,
+  type ResultadoSimulacion,
   type Rol,
 } from '@autofix/core';
 import { memoryStorage } from 'multer';
@@ -36,6 +41,7 @@ import { PipeCuerpoObjeto } from '../comun/validacion/cuerpo-objeto.pipe';
 import { PipeIdRuta } from '../comun/validacion/id-ruta.pipe';
 import { PipeValidacionZod } from '../comun/validacion/validacion-zod.pipe';
 import { PipeNumeroEtapa } from './pipe-numero-etapa';
+import type { DetalleImpacto } from './cambio-aplicador.service';
 import {
   ArchivoSubido,
   DetalleAccionCorrectiva,
@@ -202,5 +208,63 @@ export class SolicitudesCambioController {
     @RolActual() rol: Rol,
   ): Promise<DetalleAccionCorrectiva> {
     return this.service.actualizarAccionCorrectiva(id, datos, rol);
+  }
+
+  @Get('solicitudes-cambio/:id/impactos')
+  listarImpactos(@Param('id', new PipeIdRuta('id')) id: number): Promise<DetalleImpacto[]> {
+    return this.service.listarImpactos(id);
+  }
+
+  @Roles(...PERMISOS.gestionarSolicitudesCambio)
+  @HttpCode(HttpStatus.CREATED)
+  @Post('solicitudes-cambio/:id/impactos')
+  crearImpacto(
+    @Param('id', new PipeIdRuta('id')) id: number,
+    @Body(new PipeCuerpoObjeto(), new PipeValidacionZod(esquemaCrearImpacto))
+    datos: EntradaCrearImpacto,
+    @RolActual() rol: Rol,
+  ): Promise<DetalleImpacto> {
+    return this.service.crearImpacto(id, datos, rol);
+  }
+
+  @Roles(...PERMISOS.gestionarSolicitudesCambio)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('impactos-cambio/:id')
+  eliminarImpacto(
+    @Param('id', new PipeIdRuta('id')) id: number,
+    @RolActual() rol: Rol,
+  ): Promise<void> {
+    return this.service.eliminarImpacto(id, rol);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('solicitudes-cambio/:id/simular')
+  simular(
+    @Param('id', new PipeIdRuta('id')) id: number,
+    @RolActual() rol: Rol,
+  ): Promise<ResultadoSimulacion> {
+    return this.service.simular(id, rol);
+  }
+
+  @Roles(...PERMISOS.decidirSolicitudesCambio)
+  @HttpCode(HttpStatus.OK)
+  @Post('solicitudes-cambio/:id/aprobar')
+  aprobar(
+    @Param('id', new PipeIdRuta('id')) id: number,
+    @RolActual() rol: Rol,
+  ): Promise<ResultadoSimulacion> {
+    return this.service.aprobar(id, rol);
+  }
+
+  @Roles(...PERMISOS.decidirSolicitudesCambio)
+  @HttpCode(HttpStatus.OK)
+  @Post('solicitudes-cambio/:id/rechazar')
+  rechazar(
+    @Param('id', new PipeIdRuta('id')) id: number,
+    @Body(new PipeCuerpoObjeto(), new PipeValidacionZod(esquemaRechazarSolicitud))
+    datos: EntradaRechazarSolicitud,
+    @RolActual() rol: Rol,
+  ): Promise<DetalleSolicitudCambio> {
+    return this.service.rechazar(id, datos, rol);
   }
 }

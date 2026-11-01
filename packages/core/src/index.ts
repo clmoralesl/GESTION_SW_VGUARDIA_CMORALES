@@ -31,4 +31,5 @@ export * from './semaforo';
 export * from './variablesKpi';
 export * from './kpi';
 export * from './cambios';
+export * from './impactos';
 export * from './evidencias';

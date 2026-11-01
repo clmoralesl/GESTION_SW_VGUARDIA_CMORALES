@@ -1,4 +1,4 @@
-import { Button, Group, Menu, SegmentedControl, Switch, Tooltip } from '@mantine/core';
+import { Button, Group, Menu, SegmentedControl, Select, Switch, Tooltip } from '@mantine/core';
 import {
   IconCalendarEvent,
   IconDownload,
@@ -17,6 +17,13 @@ interface BarraHerramientasGanttProps {
   lineaBaseActiva: boolean;
   alCambiarLineaBase: (activa: boolean) => void;
   tieneLineaBase: boolean;
+  versiones?: readonly {
+    version: number;
+    descripcion?: string | null;
+    solicitudCodigo?: string | null;
+  }[];
+  versionSeleccionada?: number | null;
+  alCambiarVersion?: (version: number) => void;
   alExportarPng: () => void;
   alExportarPdf: () => void;
   exportando: boolean;
@@ -32,6 +39,9 @@ export function BarraHerramientasGantt({
   lineaBaseActiva,
   alCambiarLineaBase,
   tieneLineaBase,
+  versiones,
+  versionSeleccionada,
+  alCambiarVersion,
   alExportarPng,
   alExportarPdf,
   exportando,
@@ -71,7 +81,7 @@ export function BarraHerramientasGantt({
         <Tooltip
           label={
             tieneLineaBase
-              ? 'Muestra la línea base vigente'
+              ? 'Muestra la línea base seleccionada'
               : 'El proyecto no tiene línea base registrada'
           }
           disabled={tieneLineaBase}
@@ -86,6 +96,30 @@ export function BarraHerramientasGantt({
             />
           </span>
         </Tooltip>
+
+        {lineaBaseActiva &&
+          tieneLineaBase &&
+          versiones &&
+          versiones.length > 0 &&
+          alCambiarVersion && (
+            <Select
+              size="xs"
+              w={150}
+              data={versiones.map((v) => ({
+                value: String(v.version),
+                label: `v${v.version} ${v.solicitudCodigo ? `(${v.solicitudCodigo})` : ''}`,
+              }))}
+              value={
+                versionSeleccionada !== null && versionSeleccionada !== undefined
+                  ? String(versionSeleccionada)
+                  : null
+              }
+              onChange={(val) => {
+                if (val) alCambiarVersion(Number(val));
+              }}
+              aria-label="Versión de línea base"
+            />
+          )}
 
         <Menu shadow="md" width={180}>
           <Menu.Target>

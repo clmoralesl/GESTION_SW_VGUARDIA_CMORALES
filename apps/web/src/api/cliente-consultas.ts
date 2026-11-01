@@ -45,6 +45,9 @@ export const clienteConsultas = new QueryClient({
         mostrarError(error);
       }
     },
+    onSuccess: () => {
+      void clienteConsultas.invalidateQueries({ queryKey: ['tablero'] });
+    },
   }),
   defaultOptions: {
     queries: {

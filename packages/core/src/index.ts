@@ -34,3 +34,5 @@ export * from './kpi';
 export * from './cambios';
 export * from './impactos';
 export * from './evidencias';
+export * from './curvaS';
+export * from './tablero';

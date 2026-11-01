@@ -14,6 +14,7 @@ interface GrillaGanttProps {
   paleta: PaletaGantt;
   anchoGrilla: number;
   tieneFilaHitosProyecto?: boolean;
+  tareaSeleccionadaId?: number | null;
 }
 
 export const GrillaGantt = memo(function GrillaGantt({
@@ -24,6 +25,7 @@ export const GrillaGantt = memo(function GrillaGantt({
   paleta,
   anchoGrilla,
   tieneFilaHitosProyecto = false,
+  tareaSeleccionadaId = null,
 }: GrillaGanttProps) {
   return (
     <div
@@ -78,6 +80,8 @@ export const GrillaGantt = memo(function GrillaGantt({
             tabIndex={0}
             role="button"
             data-testid={`fila-tarea-${tarea.codigo}`}
+            data-tarea-id={tarea.id}
+            data-seleccionada={tareaSeleccionadaId === tarea.id ? 'true' : undefined}
             onClick={() => alSeleccionarTarea(tarea)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -96,6 +100,7 @@ export const GrillaGantt = memo(function GrillaGantt({
               cursor: 'pointer',
               color: paleta.texto,
               fontWeight: fila.esResumen ? 600 : 400,
+              background: tareaSeleccionadaId === tarea.id ? 'rgba(34, 139, 230, 0.15)' : undefined,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>

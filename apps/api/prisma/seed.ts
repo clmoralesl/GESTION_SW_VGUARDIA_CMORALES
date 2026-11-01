@@ -140,9 +140,7 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Mapeo del flujo de órdenes de trabajo',
       responsable: 'Jefe de Taller',
       duracionDias: 4,
-      inicioReal: fechaIsoADate('2026-11-05'),
-      finReal: null,
-      porcentajeAvance: new Prisma.Decimal(50),
+      porcentajeAvance: new Prisma.Decimal(0),
     },
   });
 
@@ -1047,10 +1045,17 @@ async function sembrarDemostracionGantt(proyectoId: number, fechaInicioIso: stri
         ordenSubactividad += 1;
         const duracion = 2 + ((e + a + s) % 5);
         let avance = 0;
+        let inicioReal: Date | null = null;
+        let finReal: Date | null = null;
         if (ordenSubactividad <= 6) {
           avance = 100;
+          inicioReal = fechaIsoADate(sumarDiasHabiles(fechaInicioIso, 0, CALENDARIO_POR_DEFECTO));
+          finReal = fechaIsoADate(
+            sumarDiasHabiles(fechaInicioIso, duracion, CALENDARIO_POR_DEFECTO),
+          );
         } else if (ordenSubactividad <= 10) {
           avance = 50;
+          inicioReal = fechaIsoADate(sumarDiasHabiles(fechaInicioIso, 5, CALENDARIO_POR_DEFECTO));
         }
 
         const sub = await prisma.tarea.create({
@@ -1064,6 +1069,8 @@ async function sembrarDemostracionGantt(proyectoId: number, fechaInicioIso: stri
             responsable: 'Desarrollador',
             duracionDias: duracion,
             porcentajeAvance: new Prisma.Decimal(avance),
+            inicioReal,
+            finReal,
           },
         });
         subactividadesCreadas.push({ id: sub.id, codigo: `${e}.${a}.${s}` });
@@ -1908,6 +1915,21 @@ async function sembrar(): Promise<void> {
 
   if (proyectoPrincipalId) {
     await recalcularProyectoSemilla(proyectoPrincipalId);
+
+    const tarea112 = await prisma.tarea.findFirst({
+      where: { proyectoId: proyectoPrincipalId, codigo: '1.1.2' },
+    });
+    if (tarea112) {
+      await prisma.tarea.update({
+        where: { id: tarea112.id },
+        data: {
+          inicioReal: fechaIsoADate('2026-11-05'),
+          porcentajeAvance: new Prisma.Decimal(50),
+        },
+      });
+      await new Promise((r) => setTimeout(r, 100));
+      await recalcularProyectoSemilla(proyectoPrincipalId);
+    }
   }
 
   if (proyectoDemoId) {

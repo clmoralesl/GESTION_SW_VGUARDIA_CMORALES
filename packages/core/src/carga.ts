@@ -183,3 +183,25 @@ export function cargaSemanal(
   }
   return celdas;
 }
+
+export function picoCarga(
+  carga: CargaDiaria,
+  profesionalId: number,
+  desdeIso: string,
+  hastaIso: string,
+): { ocupacionMaxima: number; diaPico: string | null; sobreasignado: boolean } {
+  let maximo = 0;
+  let diaPico: number | null = null;
+  for (const [dia, celda] of carga.get(profesionalId) ?? new Map<number, CeldaDia>()) {
+    if (dia < aDia(desdeIso) || dia > aDia(hastaIso)) continue;
+    if (celda.centesimas > maximo) {
+      maximo = celda.centesimas;
+      diaPico = dia;
+    }
+  }
+  return {
+    ocupacionMaxima: maximo / 100,
+    diaPico: diaPico === null ? null : aIso(diaPico),
+    sobreasignado: maximo > LIMITE_CENTESIMAS,
+  };
+}

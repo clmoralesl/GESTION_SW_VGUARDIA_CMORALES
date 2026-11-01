@@ -115,6 +115,18 @@ describe('traducirError', () => {
     expect(resultado.cuerpo.mensaje).toBe('El recurso solicitado no existe.');
   });
 
+  it('traduce ExcepcionApi 415 con titulo Tipo de medio no soportado', () => {
+    const excepcion = new ExcepcionApi(
+      HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+      'TIPO_ARCHIVO_NO_PERMITIDO',
+      'El tipo de archivo no está permitido.',
+    );
+    const resultado = traducirError(excepcion);
+    expect(resultado.estado).toBe(415);
+    expect(resultado.cuerpo.codigo).toBe('TIPO_ARCHIVO_NO_PERMITIDO');
+    expect(resultado.cuerpo.error).toBe('Tipo de medio no soportado');
+  });
+
   it('traduce error inesperado a 500 ERROR_INTERNO', () => {
     const resultado = traducirError(new Error('Fallo no controlado'));
     expect(resultado.estado).toBe(500);

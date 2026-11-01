@@ -38,6 +38,7 @@ export const CODIGOS_ERROR = [
   'KPI_CODIGO_DUPLICADO',
   'KPI_CON_MEDICIONES',
   'KPI_NO_ENCONTRADO',
+  'TIPO_ARCHIVO_NO_PERMITIDO',
 ] as const;
 
 export type CodigoError = (typeof CODIGOS_ERROR)[number];

@@ -1,8 +1,13 @@
 import {
   AmbitoKpi,
+  CategoriaCambio,
   DireccionKpi,
+  EstadoAccion,
+  EstadoEtapa,
   EstadoProyecto,
+  EstadoSolicitud,
   NivelTarea,
+  Prioridad,
   Prisma,
   PrismaClient,
   Semaforo,
@@ -10,22 +15,29 @@ import {
   UnidadKpi,
 } from '@prisma/client';
 import {
+  aplicarAccionEtapa,
   CALENDARIO_POR_DEFECTO,
   calcularHorasPlan,
   claveNombre,
   crearCalendarioLaboral,
   dateAFechaIso,
+  decidir,
   estaAtrasada,
   evaluarHito,
   fechaIsoADate,
   feriadosChileDesde,
   hoyEnZona,
+  NOMBRES_ETAPAS,
   numerarArbol,
   planificarProyecto,
+  sumarDiasCorridos,
   sumarDiasHabiles,
   TIPOS_RECURSO,
   type CalendarioLaboral,
   type DependenciaCronograma,
+  type EstadoEtapa as EstadoEtapaCore,
+  type EstadoSolicitud as EstadoSolicitudCore,
+  type SolicitudParaAccion,
   type TareaPlanificacion,
 } from '@autofix/core';
 import { cargarCalendarioLaboral } from '../src/calendario/calendario-laboral';
@@ -606,6 +618,263 @@ async function sembrarLineaBase(proyectoId: number): Promise<void> {
     throw new Error(
       `Conteo inesperado de tareas en línea base: ${lb.tareas.length} (esperado: 14)`,
     );
+  }
+}
+
+async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
+  const conteo = await prisma.solicitudCambio.count({ where: { proyectoId } });
+  if (conteo > 0) return;
+
+  const definiciones: {
+    codigo: string;
+    titulo: string;
+    descripcion: string;
+    justificacion: string;
+    solicitante: string;
+    responsable: string;
+    prioridad: Prioridad;
+    categoria: CategoriaCambio;
+    probabilidadRiesgo: number;
+    impactoRiesgo: number;
+    fechaRegistro: Date;
+    fechaDecision?: Date;
+    fechaCierre?: Date;
+    motivoRechazo?: string;
+    pasos: [number | 'decidir', string, Record<string, unknown>?][];
+    adopcion?: number;
+    accionesCorrectivas?: {
+      descripcion: string;
+      responsable: string;
+      fechaCompromiso: string;
+      fechaCierre?: string;
+      estado: EstadoAccion;
+    }[];
+  }[] = [
+    {
+      codigo: 'SC-001',
+      titulo: 'Ampliación de memoria en servidores de taller',
+      descripcion: 'Se requiere ampliar la memoria RAM para soportar mayor concurrencia.',
+      justificacion: 'Evitar degradación en horas punta de recepción.',
+      solicitante: 'Jefe de Taller',
+      responsable: 'Carlos Morales',
+      prioridad: Prioridad.MEDIA,
+      categoria: CategoriaCambio.RECURSO,
+      probabilidadRiesgo: 2,
+      impactoRiesgo: 3,
+      fechaRegistro: new Date('2026-10-25T09:00:00.000Z'),
+      pasos: [[1, 'iniciar']],
+    },
+    {
+      codigo: 'SC-002',
+      titulo: 'Integración de pasarela de pago web',
+      descripcion: 'Permitir el pago de presupuestos directamente desde la aplicación.',
+      justificacion: 'Reducir filas en caja y mejorar el flujo de caja.',
+      solicitante: 'Gerente Comercial',
+      responsable: 'Valeria Guardia',
+      prioridad: Prioridad.ALTA,
+      categoria: CategoriaCambio.ALCANCE,
+      probabilidadRiesgo: 3,
+      impactoRiesgo: 4,
+      fechaRegistro: new Date('2026-10-20T10:00:00.000Z'),
+      pasos: [
+        [1, 'iniciar'],
+        [1, 'completar'],
+        [2, 'iniciar'],
+      ],
+    },
+    {
+      codigo: 'SC-003',
+      titulo: 'Incorporación de escáneres OBD-II Bluetooth',
+      descripcion: 'Adquisición y sincronización de nuevos lectores inalámbricos.',
+      justificacion: 'Diagnóstico directo en bahía sin mover vehículos.',
+      solicitante: 'Jefe de Diagnóstico',
+      responsable: 'Carlos Morales',
+      prioridad: Prioridad.ALTA,
+      categoria: CategoriaCambio.COSTO,
+      probabilidadRiesgo: 2,
+      impactoRiesgo: 4,
+      fechaRegistro: new Date('2026-10-15T11:00:00.000Z'),
+      fechaDecision: new Date('2026-10-28T14:00:00.000Z'),
+      pasos: [
+        [1, 'iniciar'],
+        [1, 'completar'],
+        [2, 'iniciar'],
+        [2, 'completar'],
+        [3, 'iniciar'],
+        [3, 'completar'],
+        ['decidir', 'aprobar'],
+        [4, 'iniciar'],
+      ],
+    },
+    {
+      codigo: 'SC-004',
+      titulo: 'Reemplazo total de tabletas de mecánicos',
+      descripcion: 'Sustitución de tabletas por modelos de gama alta.',
+      justificacion: 'Preferencia de marca.',
+      solicitante: 'Mecánico Senior',
+      responsable: 'Valeria Guardia',
+      prioridad: Prioridad.BAJA,
+      categoria: CategoriaCambio.COSTO,
+      probabilidadRiesgo: 4,
+      impactoRiesgo: 4,
+      fechaRegistro: new Date('2026-10-18T16:00:00.000Z'),
+      fechaDecision: new Date('2026-10-29T17:00:00.000Z'),
+      motivoRechazo: 'Costo excesivo no justificado por necesidades técnicas.',
+      pasos: [
+        [1, 'iniciar'],
+        [1, 'completar'],
+        [2, 'iniciar'],
+        [2, 'completar'],
+        [3, 'iniciar'],
+        [3, 'completar'],
+        ['decidir', 'rechazar'],
+      ],
+    },
+    {
+      codigo: 'SC-005',
+      titulo: 'Protocolo de sanitización y entrega limpia de vehículos',
+      descripcion: 'Procedimiento de limpieza antes de entregar el automóvil al cliente.',
+      justificacion: 'Mejorar satisfacción del cliente y evaluación del taller.',
+      solicitante: 'Atención al Cliente',
+      responsable: 'Valeria Guardia',
+      prioridad: Prioridad.MEDIA,
+      categoria: CategoriaCambio.CALIDAD,
+      probabilidadRiesgo: 1,
+      impactoRiesgo: 2,
+      fechaRegistro: new Date('2026-10-01T08:30:00.000Z'),
+      fechaDecision: new Date('2026-10-10T11:00:00.000Z'),
+      fechaCierre: new Date('2026-10-30T18:00:00.000Z'),
+      adopcion: 85,
+      accionesCorrectivas: [
+        {
+          descripcion: 'Ajuste en disponibilidad de insumos de aspirado',
+          responsable: 'Jefe de Taller',
+          fechaCompromiso: '2026-10-20',
+          fechaCierre: '2026-10-22',
+          estado: EstadoAccion.CERRADA,
+        },
+      ],
+      pasos: [
+        [1, 'iniciar'],
+        [1, 'completar'],
+        [2, 'iniciar'],
+        [2, 'completar'],
+        [3, 'iniciar'],
+        [3, 'completar'],
+        ['decidir', 'aprobar'],
+        [4, 'omitir', { comentario: 'Procedimiento operativo estándar previamente validado' }],
+        [5, 'iniciar'],
+        [5, 'completar'],
+        [6, 'iniciar'],
+        [6, 'completar'],
+        [7, 'iniciar'],
+        [7, 'completar'],
+        [8, 'omitir', { comentario: 'Se consolidaron los resultados en el informe mensual' }],
+        [9, 'iniciar'],
+        [9, 'completar'],
+        [10, 'iniciar'],
+        [10, 'completar'],
+      ],
+    },
+  ];
+
+  for (const def of definiciones) {
+    let estadoModelo: SolicitudParaAccion = {
+      estado: 'REGISTRADA' as EstadoSolicitudCore,
+      etapaActual: 1,
+      etapas: Array.from({ length: 10 }, (_, i) => ({
+        numero: i + 1,
+        estado: 'PENDIENTE' as EstadoEtapaCore,
+      })),
+    };
+
+    if (def.codigo === 'SC-005') {
+      const etapa10 = estadoModelo.etapas.find((e) => e.numero === 10);
+      if (etapa10) etapa10.porcentajeAdopcion = def.adopcion;
+    }
+
+    let cursorFecha = dateAFechaIso(def.fechaRegistro);
+    let fechaDecisionCalculada: Date | null = def.fechaDecision ?? null;
+    let fechaCierreCalculada: Date | null = def.fechaCierre ?? null;
+
+    for (const [paso, accion, datosExtra] of def.pasos) {
+      if (paso === 'decidir') {
+        cursorFecha = sumarDiasCorridos(cursorFecha, 1);
+        estadoModelo = decidir(estadoModelo, accion as 'aprobar' | 'rechazar');
+        fechaDecisionCalculada = fechaIsoADate(cursorFecha);
+      } else {
+        const incrementoDias = accion === 'completar' ? 2 : 1;
+        cursorFecha = sumarDiasCorridos(cursorFecha, incrementoDias);
+        estadoModelo = aplicarAccionEtapa(
+          estadoModelo,
+          paso,
+          accion as 'iniciar' | 'completar' | 'omitir',
+          { hoy: cursorFecha, ...datosExtra },
+        );
+        if (paso === 10 && accion === 'completar') {
+          fechaCierreCalculada = fechaIsoADate(cursorFecha);
+        }
+      }
+    }
+
+    const solicitud = await prisma.solicitudCambio.create({
+      data: {
+        proyectoId,
+        codigo: def.codigo,
+        titulo: def.titulo,
+        descripcion: def.descripcion,
+        justificacion: def.justificacion,
+        solicitante: def.solicitante,
+        responsable: def.responsable,
+        prioridad: def.prioridad,
+        categoria: def.categoria,
+        probabilidadRiesgo: def.probabilidadRiesgo,
+        impactoRiesgo: def.impactoRiesgo,
+        estado: estadoModelo.estado as EstadoSolicitud,
+        etapaActual: estadoModelo.etapaActual,
+        fechaRegistro: def.fechaRegistro,
+        fechaDecision: fechaDecisionCalculada,
+        fechaCierre: fechaCierreCalculada,
+        motivoRechazo: def.motivoRechazo,
+      },
+    });
+
+    for (const etapaMod of estadoModelo.etapas) {
+      const creadaEtapa = await prisma.etapaCambio.create({
+        data: {
+          solicitudId: solicitud.id,
+          numero: etapaMod.numero,
+          nombre: NOMBRES_ETAPAS[etapaMod.numero] ?? `Etapa ${etapaMod.numero}`,
+          estado: etapaMod.estado as EstadoEtapa,
+          fechaIniciada: etapaMod.fechaIniciada
+            ? fechaIsoADate(String(etapaMod.fechaIniciada).slice(0, 10))
+            : null,
+          fechaCompletada: etapaMod.fechaCompletada
+            ? fechaIsoADate(String(etapaMod.fechaCompletada).slice(0, 10))
+            : null,
+          comentario: etapaMod.comentario ?? null,
+          porcentajeAdopcion:
+            def.codigo === 'SC-005' && etapaMod.numero === 10 && def.adopcion
+              ? new Prisma.Decimal(def.adopcion)
+              : null,
+        },
+      });
+
+      if (def.accionesCorrectivas && etapaMod.numero === 9) {
+        for (const ac of def.accionesCorrectivas) {
+          await prisma.accionCorrectiva.create({
+            data: {
+              etapaId: creadaEtapa.id,
+              descripcion: ac.descripcion,
+              responsable: ac.responsable,
+              fechaCompromiso: fechaIsoADate(ac.fechaCompromiso),
+              fechaCierre: ac.fechaCierre ? fechaIsoADate(ac.fechaCierre) : null,
+              estado: ac.estado,
+            },
+          });
+        }
+      }
+    }
   }
 }
 
@@ -1317,6 +1586,7 @@ async function sembrar(): Promise<void> {
     await sembrarAsignaciones(proyectoPrincipalId);
     await recalcularCostosSemilla(proyectoPrincipalId);
     await sembrarLineaBase(proyectoPrincipalId);
+    await sembrarSolicitudesCambio(proyectoPrincipalId);
   }
 
   if (proyectoDemoId) {

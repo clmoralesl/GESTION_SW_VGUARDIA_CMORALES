@@ -112,7 +112,7 @@ describe('Variables de gestión del cambio (A1 y A2)', () => {
         etapas: [
           {
             id: 104,
-            numero: 1,
+            numero: 10,
             estado: 'COMPLETADA',
             fechaIniciada: '2026-10-18',
             porcentajeAdopcion: 85,
@@ -374,14 +374,20 @@ describe('Variables de gestión del cambio (A1 y A2)', () => {
       {
         id: 2,
         codigo: 'SC-002',
-        estado: 'APROBADA',
+        estado: 'CERRADA',
         fechaRegistro: '2026-11-01',
         probabilidadRiesgo: 1,
         impactoRiesgo: 1,
-        etapas: [
-          { id: 2, numero: 1, estado: 'COMPLETADA', porcentajeAdopcion: 0 },
-          { id: 3, numero: 2, estado: 'COMPLETADA', porcentajeAdopcion: 100 },
-        ],
+        etapas: [{ id: 2, numero: 10, estado: 'COMPLETADA', porcentajeAdopcion: 0 }],
+      },
+      {
+        id: 3,
+        codigo: 'SC-003',
+        estado: 'CERRADA',
+        fechaRegistro: '2026-11-01',
+        probabilidadRiesgo: 1,
+        impactoRiesgo: 1,
+        etapas: [{ id: 3, numero: 10, estado: 'COMPLETADA', porcentajeAdopcion: 100 }],
       },
     ];
     expect(
@@ -444,6 +450,53 @@ describe('Variables de gestión del cambio (A1 y A2)', () => {
       diasHabilesEntre: diasHabilesEntreFijo,
     });
     expect(r.SC_RIESGO_ALTO).toBe(2);
+  });
+
+  it('A2 regresion: SC_ADOPCION_PROM solo suma porcentaje de etapa 10 de solicitudes CERRADA', () => {
+    const solicitudes: SolicitudCambioItem[] = [
+      {
+        id: 1,
+        codigo: 'SC-001',
+        estado: 'IMPLEMENTADA',
+        fechaRegistro: '2026-10-25',
+        probabilidadRiesgo: 1,
+        impactoRiesgo: 1,
+        etapas: [
+          {
+            id: 10,
+            numero: 10,
+            estado: 'EN_CURSO',
+            porcentajeAdopcion: 40,
+          },
+        ],
+      },
+      {
+        id: 2,
+        codigo: 'SC-002',
+        estado: 'CERRADA',
+        fechaRegistro: '2026-10-20',
+        fechaCierre: '2026-10-30',
+        probabilidadRiesgo: 1,
+        impactoRiesgo: 1,
+        etapas: [
+          {
+            id: 20,
+            numero: 10,
+            estado: 'COMPLETADA',
+            porcentajeAdopcion: 85,
+          },
+        ],
+      },
+    ];
+
+    const r = calcularVariablesCambio({
+      solicitudes,
+      lineasBase: [],
+      corte: '2026-11-16',
+      diasHabilesEntre: diasHabilesEntreFijo,
+    });
+
+    expect(r.SC_ADOPCION_PROM).toBe(85);
   });
 
   it('codigosVariablesPorAmbito separa variables de CAMBIO y PROYECTO', () => {

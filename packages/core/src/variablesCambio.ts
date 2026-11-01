@@ -152,11 +152,15 @@ export function calcularVariablesCambio(
       cuentaEval += 1;
     }
 
-    for (const e of s.etapas ?? []) {
-      if (typeof e.porcentajeAdopcion === 'number') {
-        sumaAdopcion += e.porcentajeAdopcion;
+    if (s.estado === 'CERRADA') {
+      const e10 = s.etapas?.find((e) => e.numero === 10);
+      if (e10 && typeof e10.porcentajeAdopcion === 'number') {
+        sumaAdopcion += e10.porcentajeAdopcion;
         cuentaAdopcion += 1;
       }
+    }
+
+    for (const e of s.etapas ?? []) {
       for (const a of e.acciones ?? []) {
         accionesTotal += 1;
         if (a.estado === 'CERRADA') {

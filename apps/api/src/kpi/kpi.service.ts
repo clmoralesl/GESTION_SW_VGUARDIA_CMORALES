@@ -7,8 +7,9 @@ import {
   type KpiUmbral,
 } from '@prisma/client';
 import {
+  calcularVariablesCambio,
   calcularVariablesKpi,
-  CODIGOS_VARIABLES_KPI,
+  codigosVariablesPorAmbito,
   redondear,
   validarUmbrales,
   VARIABLES_KPI,
@@ -30,6 +31,7 @@ import { ExcepcionApi } from '../comun/errores/excepcion-api';
 import { Reloj } from '../comun/reloj/reloj';
 import { PrismaService } from '../prisma/prisma.service';
 import { cargarDatosVariablesKpi } from './datos-variables-kpi';
+import { cargarDatosVariablesCambio } from './datos-variables-cambio';
 
 function mapearKpiDetalle(kpi: KpiDefinicion & { umbrales: KpiUmbral[] }): KpiDetalleRespuesta {
   const verde = kpi.umbrales.find((u) => u.semaforo === 'VERDE')?.valorDesde;
@@ -95,7 +97,8 @@ export class KpiService {
   }
 
   async crear(datos: CrearKpi, rol: Rol): Promise<KpiDetalleRespuesta> {
-    const analisis = analizarFormula(datos.formula, CODIGOS_VARIABLES_KPI);
+    const codigosValidos = codigosVariablesPorAmbito(datos.ambito);
+    const analisis = analizarFormula(datos.formula, codigosValidos);
     if (!analisis.valida) {
       throw new ExcepcionApi(
         HttpStatus.UNPROCESSABLE_ENTITY,
@@ -187,8 +190,12 @@ export class KpiService {
       throw new ExcepcionApi(HttpStatus.UNPROCESSABLE_ENTITY, 'UMBRALES_INVALIDOS', errorUmbrales);
     }
 
-    if (datos.formula !== undefined) {
-      const analisis = analizarFormula(datos.formula, CODIGOS_VARIABLES_KPI);
+    const ambitoEfectivo = (datos.ambito ?? actual.ambito) as AmbitoKpi;
+    const formulaEfectiva = datos.formula ?? actual.formula;
+
+    if (datos.formula !== undefined || datos.ambito !== undefined) {
+      const codigosValidos = codigosVariablesPorAmbito(ambitoEfectivo);
+      const analisis = analizarFormula(formulaEfectiva, codigosValidos);
       if (!analisis.valida) {
         throw new ExcepcionApi(
           HttpStatus.UNPROCESSABLE_ENTITY,
@@ -328,7 +335,9 @@ export class KpiService {
     variables: string[];
     errores: unknown[];
   }> {
-    const analisis = analizarFormula(datos.formula, CODIGOS_VARIABLES_KPI);
+    const ambitoEfectivo = (datos.ambito ?? AmbitoKpi.PROYECTO) as AmbitoKpi;
+    const codigosValidos = codigosVariablesPorAmbito(ambitoEfectivo);
+    const analisis = analizarFormula(datos.formula, codigosValidos);
     if (!analisis.valida) {
       return {
         valida: false,
@@ -349,8 +358,22 @@ export class KpiService {
     }
 
     const corte = datos.fechaCorte ?? this.reloj.hoy();
-    const variablesCalculadas = await this.calcularVariablesDeProyecto(datos.proyectoId, corte);
-    const raw = evaluarArbol(analisis.arbol, variablesCalculadas.valores);
+    let valores: Record<string, number | null>;
+    if (ambitoEfectivo === AmbitoKpi.CAMBIO) {
+      const calendario = await cargarCalendarioLaboral(this.prisma, datos.proyectoId);
+      const datosCambio = await cargarDatosVariablesCambio(
+        this.prisma,
+        datos.proyectoId,
+        calendario,
+        corte,
+      );
+      valores = calcularVariablesCambio(datosCambio);
+    } else {
+      const variablesCalculadas = await this.calcularVariablesDeProyecto(datos.proyectoId, corte);
+      valores = variablesCalculadas.valores;
+    }
+
+    const raw = evaluarArbol(analisis.arbol, valores);
     return {
       valida: true,
       valor: raw !== null ? redondear(raw, 4) : null,
@@ -359,9 +382,12 @@ export class KpiService {
     };
   }
 
-  async listarPorProyecto(proyectoId: number): Promise<KpiProyectoResumen[]> {
+  async listarPorProyecto(
+    proyectoId: number,
+    ambito: AmbitoKpi = AmbitoKpi.PROYECTO,
+  ): Promise<KpiProyectoResumen[]> {
     const kpisActivos = await this.prisma.kpiDefinicion.findMany({
-      where: { activo: true, ambito: AmbitoKpi.PROYECTO },
+      where: { activo: true, ambito },
       include: { umbrales: true },
       orderBy: { codigo: 'asc' },
     });

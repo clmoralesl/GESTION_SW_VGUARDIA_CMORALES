@@ -31,6 +31,6 @@ import { PASOS_RECALCULO } from './recalculo.tipos';
       inject: [PasoFechas, PasoCostos, PasoAlertas, PasoHitos, PasoKpi],
     },
   ],
-  exports: [RecalculoService, ArbolTareasService],
+  exports: [RecalculoService, ArbolTareasService, PasoKpi],
 })
 export class RecalculoModule {}

@@ -48,6 +48,7 @@ import { Reloj } from '../comun/reloj/reloj';
 import { ROL_BD } from '../comun/roles/rol-bd';
 import { PrismaService } from '../prisma/prisma.service';
 import { obtenerProyectoAbierto } from '../proyectos/proyecto-abierto';
+import { PasoKpi } from '../recalculo/paso-kpi';
 import { CambioAplicadorService, type DetalleImpacto } from './cambio-aplicador.service';
 
 const ESTADOS_TERMINALES_SOLICITUD: readonly EstadoSolicitudPrisma[] = [
@@ -133,6 +134,7 @@ export class SolicitudesCambioService {
     private readonly bitacora: BitacoraService,
     private readonly reloj: Reloj,
     private readonly aplicador: CambioAplicadorService,
+    private readonly pasoKpi: PasoKpi,
   ) {
     this.rutaUploads = process.env.RUTA_UPLOADS || path.resolve(process.cwd(), 'uploads');
   }
@@ -441,6 +443,8 @@ export class SolicitudesCambioService {
         },
       });
 
+      await this.pasoKpi.medirAmbitoCambio(tx, proyectoId);
+
       return this.mapearSolicitud(completa, hoy);
     });
   }
@@ -530,6 +534,8 @@ export class SolicitudesCambioService {
           cambios,
         );
       }
+
+      await this.pasoKpi.medirAmbitoCambio(tx, solicitud.proyectoId);
 
       return this.mapearSolicitud(actualizada, hoy);
     });
@@ -658,6 +664,8 @@ export class SolicitudesCambioService {
           cambios,
         );
       }
+
+      await this.pasoKpi.medirAmbitoCambio(tx, etapa.solicitud.proyectoId);
 
       return this.mapearEtapa(actualizada, hoy);
     });
@@ -824,6 +832,8 @@ export class SolicitudesCambioService {
           },
         },
       });
+
+      await this.pasoKpi.medirAmbitoCambio(tx, solicitud.proyectoId);
 
       return this.mapearSolicitud(completa, hoy);
     });
@@ -1125,6 +1135,8 @@ export class SolicitudesCambioService {
         },
       );
 
+      await this.pasoKpi.medirAmbitoCambio(tx, etapa.solicitud.proyectoId);
+
       return this.mapearAccion(accion);
     });
   }
@@ -1209,6 +1221,8 @@ export class SolicitudesCambioService {
           cambios,
         );
       }
+
+      await this.pasoKpi.medirAmbitoCambio(tx, accion.etapa.solicitud.proyectoId);
 
       return this.mapearAccion(actualizada);
     });

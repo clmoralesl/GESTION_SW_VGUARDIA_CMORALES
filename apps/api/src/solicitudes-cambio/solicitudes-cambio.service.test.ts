@@ -9,6 +9,8 @@ import { fechaIsoADate } from '@autofix/core';
 import type { BitacoraService } from '../comun/bitacora/bitacora.service';
 import type { Reloj } from '../comun/reloj/reloj';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { PasoKpi } from '../recalculo/paso-kpi';
+import type { CambioAplicadorService } from './cambio-aplicador.service';
 import { SolicitudesCambioService } from './solicitudes-cambio.service';
 
 describe('SolicitudesCambioService', () => {
@@ -27,6 +29,11 @@ describe('SolicitudesCambioService', () => {
     registrarCambios: vi.fn().mockResolvedValue(undefined),
     registrarEliminacion: vi.fn().mockResolvedValue(undefined),
   } as unknown as BitacoraService;
+
+  const aplicadorMock = {} as unknown as CambioAplicadorService;
+  const pasoKpiMock = {
+    medirAmbitoCambio: vi.fn().mockResolvedValue(undefined),
+  } as unknown as PasoKpi;
 
   it('AJ1: al completar una etapa respeta Reloj.hoy() y calcula duracionRealDias positiva', async () => {
     const solicitudMock = {
@@ -170,7 +177,13 @@ describe('SolicitudesCambioService', () => {
       $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
     } as unknown as PrismaService;
 
-    const servicio = new SolicitudesCambioService(prismaMock, bitacoraMock, relojMock);
+    const servicio = new SolicitudesCambioService(
+      prismaMock,
+      bitacoraMock,
+      relojMock,
+      aplicadorMock,
+      pasoKpiMock,
+    );
 
     const resultado = await servicio.ejecutarAccionEtapa(3, 4, 'completar', undefined, 'CC');
 
@@ -188,11 +201,19 @@ describe('SolicitudesCambioService', () => {
       expect.anything(),
       [{ campo: 'estado', anterior: 'EN_CURSO', nuevo: 'COMPLETADA' }],
     );
+
+    expect(pasoKpiMock.medirAmbitoCambio).toHaveBeenCalledWith(txMock, 1);
   });
 
   it('AJ3: rechaza con 400 VALIDACION_FALLIDA cuando porcentajeAdopcion se envia en etapa diferente a 10', async () => {
     const prismaMock = {} as PrismaService;
-    const servicio = new SolicitudesCambioService(prismaMock, bitacoraMock, relojMock);
+    const servicio = new SolicitudesCambioService(
+      prismaMock,
+      bitacoraMock,
+      relojMock,
+      aplicadorMock,
+      pasoKpiMock,
+    );
 
     await expect(
       servicio.actualizarEtapa(3, 9, { porcentajeAdopcion: 80 }, 'JP'),
@@ -241,7 +262,13 @@ describe('SolicitudesCambioService', () => {
       $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
     } as unknown as PrismaService;
 
-    const servicio = new SolicitudesCambioService(prismaMock, bitacoraMock, relojMock);
+    const servicio = new SolicitudesCambioService(
+      prismaMock,
+      bitacoraMock,
+      relojMock,
+      aplicadorMock,
+      pasoKpiMock,
+    );
 
     await expect(servicio.actualizarEtapa(3, 5, { comentario: '   ' }, 'JP')).rejects.toMatchObject(
       {
@@ -282,7 +309,13 @@ describe('SolicitudesCambioService', () => {
       $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
     } as unknown as PrismaService;
 
-    const servicio = new SolicitudesCambioService(prismaMock, bitacoraMock, relojMock);
+    const servicio = new SolicitudesCambioService(
+      prismaMock,
+      bitacoraMock,
+      relojMock,
+      aplicadorMock,
+      pasoKpiMock,
+    );
 
     await expect(
       servicio.ejecutarAccionEtapa(3, 4, 'completar', undefined, 'CC'),

@@ -29,6 +29,7 @@ export * from './asignaciones';
 export * from './valorGanado';
 export * from './semaforo';
 export * from './variablesKpi';
+export * from './variablesCambio';
 export * from './kpi';
 export * from './cambios';
 export * from './impactos';

@@ -226,4 +226,92 @@ describe('PaginaKpi', () => {
     const botonesHistorial = screen.getAllByRole('button', { name: /Ver historial del KPI/i });
     expect(botonesHistorial.length).toBeGreaterThan(0);
   });
+
+  it('permite alternar entre los ambitos Proyecto y Gestion del cambio mostrando insignias de Adicional', async () => {
+    const kpisConCambio: KpiDetalleRespuesta[] = [
+      ...kpisMock,
+      {
+        id: 10,
+        codigo: 'CAMBIO_TIEMPO_CICLO',
+        nombre: 'Tiempo de ciclo promedio',
+        descripcion: null,
+        ambito: 'CAMBIO',
+        formula: 'SC_TIEMPO_CICLO_PROM',
+        unidad: 'DIAS',
+        meta: 30,
+        direccion: 'MENOR_MEJOR',
+        esAdicional: true,
+        activo: true,
+        umbrales: { verde: 30, amarillo: 45 },
+      },
+    ];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/kpi?ambito=CAMBIO') || url.includes('ambito=CAMBIO')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve([
+                {
+                  kpiId: 10,
+                  codigo: 'CAMBIO_TIEMPO_CICLO',
+                  nombre: 'Tiempo de ciclo promedio',
+                  descripcion: null,
+                  ambito: 'CAMBIO',
+                  unidad: 'DIAS',
+                  meta: 30,
+                  direccion: 'MENOR_MEJOR',
+                  valor: 29,
+                  semaforo: 'VERDE',
+                  medidoEn: '2026-11-16T12:00:00Z',
+                  origen: 'corte=2026-11-16;ambito=CAMBIO',
+                  umbrales: { verde: 30, amarillo: 45 },
+                },
+              ]),
+          });
+        }
+        if (url.includes('/proyectos/1/kpi')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(resumenesMock),
+          });
+        }
+        if (url.includes('/kpi')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(kpisConCambio),
+          });
+        }
+        if (url.includes('/proyectos/1')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                id: 1,
+                nombre: 'AutoFix · Implementación',
+                estado: 'EN_CURSO',
+              }),
+          });
+        }
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }),
+    );
+
+    renderConRol('JP');
+    expect(await screen.findByText('SPI')).toBeInTheDocument();
+    expect(screen.queryByText('CAMBIO_TIEMPO_CICLO')).not.toBeInTheDocument();
+
+    const pestanaCambio = screen.getByText('Gestión del cambio');
+    fireEvent.click(pestanaCambio);
+
+    expect(await screen.findByText('CAMBIO_TIEMPO_CICLO')).toBeInTheDocument();
+    expect(screen.getByText('Adicional')).toBeInTheDocument();
+    expect(screen.queryByText('SPI')).not.toBeInTheDocument();
+  });
 });

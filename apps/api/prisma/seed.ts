@@ -22,11 +22,9 @@ import {
   crearCalendarioLaboral,
   dateAFechaIso,
   decidir,
-  estaAtrasada,
   evaluarHito,
   fechaIsoADate,
   feriadosChileDesde,
-  hoyEnZona,
   NOMBRES_ETAPAS,
   numerarArbol,
   planificarProyecto,
@@ -59,25 +57,6 @@ const PROYECTOS_SEMILLA = [
     presupuesto: 45000000,
     fechaInicio: new Date('2026-11-02T00:00:00.000Z'),
     fechaFin: new Date('2027-03-31T00:00:00.000Z'),
-    estado: EstadoProyecto.EN_CURSO,
-  },
-  {
-    nombre: 'Piloto de agenda · 2026',
-    descripcion: 'Piloto inicial del módulo de agenda de mecánicos.',
-    responsable: 'Jefe de Proyecto',
-    presupuesto: 8000000,
-    fechaInicio: new Date('2026-03-02T00:00:00.000Z'),
-    fechaFin: new Date('2026-06-30T00:00:00.000Z'),
-    estado: EstadoProyecto.CERRADO,
-  },
-  {
-    nombre: 'AutoFix · Demostración Gantt',
-    descripcion:
-      'Demostración de rendimiento y visualización con 60 tareas y dependencias de los 4 tipos.',
-    responsable: 'Jefe de Proyecto',
-    presupuesto: 30000000,
-    fechaInicio: fechaIsoADate(sumarDiasHabiles(hoyEnZona(), -20, CALENDARIO_POR_DEFECTO)),
-    fechaFin: fechaIsoADate(sumarDiasHabiles(hoyEnZona(), 40, CALENDARIO_POR_DEFECTO)),
     estado: EstadoProyecto.EN_CURSO,
   },
 ];
@@ -140,7 +119,8 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Mapeo del flujo de órdenes de trabajo',
       responsable: 'Jefe de Taller',
       duracionDias: 4,
-      porcentajeAvance: new Prisma.Decimal(0),
+      inicioReal: fechaIsoADate('2026-11-05'),
+      porcentajeAvance: new Prisma.Decimal(50),
     },
   });
 
@@ -182,6 +162,34 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Prototipo de pantallas de recepción',
       responsable: 'Diseñador UI',
       duracionDias: 4,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const act13 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: etapa1.id,
+      nivel: NivelTarea.ACTIVIDAD,
+      codigo: '~1.3',
+      orden: 3,
+      nombre: 'Arquitectura e infraestructura',
+      responsable: 'Jefe de Proyecto',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act13.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~1.3.1',
+      orden: 1,
+      nombre: 'Definición de arquitectura y servidores',
+      responsable: 'Desarrollador Senior',
+      duracionDias: 3,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -285,6 +293,286 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
     },
   });
 
+  const act23 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: etapa2.id,
+      nivel: NivelTarea.ACTIVIDAD,
+      codigo: '~2.3',
+      orden: 3,
+      nombre: 'Módulo de inventario y repuestos',
+      responsable: 'Desarrollador',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act23.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~2.3.1',
+      orden: 1,
+      nombre: 'Control de stock de repuestos comunes',
+      responsable: 'Desarrollador',
+      duracionDias: 4,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const etapa3 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: null,
+      nivel: NivelTarea.ETAPA,
+      codigo: '~3',
+      orden: 3,
+      nombre: 'Pruebas e integración',
+      responsable: 'Jefe de Proyecto',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const act31 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: etapa3.id,
+      nivel: NivelTarea.ACTIVIDAD,
+      codigo: '~3.1',
+      orden: 1,
+      nombre: 'Pruebas del sistema',
+      responsable: 'Desarrollador Senior',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act31.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~3.1.1',
+      orden: 1,
+      nombre: 'Pruebas unitarias y de integración de APIs',
+      responsable: 'Desarrollador',
+      duracionDias: 5,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act31.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~3.1.2',
+      orden: 2,
+      nombre: 'Pruebas de carga y concurrencia',
+      responsable: 'Desarrollador Senior',
+      duracionDias: 4,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const act32 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: etapa3.id,
+      nivel: NivelTarea.ACTIVIDAD,
+      codigo: '~3.2',
+      orden: 2,
+      nombre: 'Capacitación del personal',
+      responsable: 'Jefe de Taller',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act32.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~3.2.1',
+      orden: 1,
+      nombre: 'Capacitación a jefes de taller y recepcionistas',
+      responsable: 'Jefe de Taller',
+      duracionDias: 3,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act32.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~3.2.2',
+      orden: 2,
+      nombre: 'Manuales de usuario y guías rápidas',
+      responsable: 'Diseñador UI',
+      duracionDias: 3,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const act33 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: etapa3.id,
+      nivel: NivelTarea.ACTIVIDAD,
+      codigo: '~3.3',
+      orden: 3,
+      nombre: 'Validación con usuarios',
+      responsable: 'Jefe de Proyecto',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act33.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~3.3.1',
+      orden: 1,
+      nombre: 'Pruebas de aceptación con mecánicos',
+      responsable: 'Mecánica senior',
+      duracionDias: 4,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const etapa4 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: null,
+      nivel: NivelTarea.ETAPA,
+      codigo: '~4',
+      orden: 4,
+      nombre: 'Puesta en marcha y soporte',
+      responsable: 'Jefe de Proyecto',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const act41 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: etapa4.id,
+      nivel: NivelTarea.ACTIVIDAD,
+      codigo: '~4.1',
+      orden: 1,
+      nombre: 'Despliegue a producción',
+      responsable: 'Desarrollador Senior',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act41.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~4.1.1',
+      orden: 1,
+      nombre: 'Configuración del entorno de producción',
+      responsable: 'Desarrollador Senior',
+      duracionDias: 3,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act41.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~4.1.2',
+      orden: 2,
+      nombre: 'Migración inicial de datos del taller',
+      responsable: 'Desarrollador',
+      duracionDias: 2,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const act42 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: etapa4.id,
+      nivel: NivelTarea.ACTIVIDAD,
+      codigo: '~4.2',
+      orden: 2,
+      nombre: 'Marcha blanca',
+      responsable: 'Jefe de Proyecto',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act42.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~4.2.1',
+      orden: 1,
+      nombre: 'Operación en paralelo durante marcha blanca',
+      responsable: 'Jefe de Taller',
+      duracionDias: 5,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act42.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~4.2.2',
+      orden: 2,
+      nombre: 'Resolución de incidencias prioritarias',
+      responsable: 'Desarrollador Senior',
+      duracionDias: 4,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  const act43 = await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: etapa4.id,
+      nivel: NivelTarea.ACTIVIDAD,
+      codigo: '~4.3',
+      orden: 3,
+      nombre: 'Cierre y entrega',
+      responsable: 'Jefe de Proyecto',
+      duracionDias: 1,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act43.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~4.3.1',
+      orden: 1,
+      nombre: 'Revisión final y firma de acta de entrega',
+      responsable: 'Jefe de Proyecto',
+      duracionDias: 2,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
   const todas = await prisma.tarea.findMany({ where: { proyectoId } });
   const numeracion = numerarArbol(todas);
 
@@ -315,6 +603,18 @@ const DEPENDENCIAS_SEMILLA: {
   { predecesora: '2.1.1', sucesora: '2.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
   { predecesora: '2.1.2', sucesora: '2.2.1', tipo: TipoDependencia.SS, desfaseDias: 7 },
   { predecesora: '1.2.1', sucesora: '2.2.2', tipo: TipoDependencia.SF, desfaseDias: 0 },
+  { predecesora: '1.2.1', sucesora: '1.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.1.1', sucesora: '2.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.1.2', sucesora: '3.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.1.1', sucesora: '3.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.1.1', sucesora: '3.2.1', tipo: TipoDependencia.SS, desfaseDias: 1 },
+  { predecesora: '3.2.1', sucesora: '3.2.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.1.2', sucesora: '3.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.1.2', sucesora: '4.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '4.1.1', sucesora: '4.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '4.1.2', sucesora: '4.2.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '4.2.1', sucesora: '4.2.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '4.2.2', sucesora: '4.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
 ];
 
 async function sembrarDependencias(proyectoId: number): Promise<void> {
@@ -412,44 +712,20 @@ async function planificarSemilla(proyectoId: number): Promise<void> {
     });
   }
 
-  if (plan.finProyecto !== '2026-12-10') {
+  if (plan.finProyecto !== '2027-01-12') {
     throw new Error(
-      `Fin de proyecto inesperado en seed: ${plan.finProyecto} (esperado: 2026-12-10)`,
+      `Fin de proyecto inesperado en seed: ${plan.finProyecto} (esperado: 2027-01-12)`,
     );
   }
 
-  const tarea122 = plan.tareas.find((t) => t.codigo === '1.2.2');
-  if (!tarea122 || tarea122.holguraDias !== 16) {
-    throw new Error(
-      `Holgura inesperada para 1.2.2 en seed: ${tarea122?.holguraDias} (esperado: 16)`,
-    );
+  if (plan.tareas.length !== 36) {
+    throw new Error(`Total de tareas inesperado en seed: ${plan.tareas.length} (esperado: 36)`);
   }
 
-  const tarea222 = plan.tareas.find((t) => t.codigo === '2.2.2');
-  if (
-    !tarea222 ||
-    tarea222.inicioPlan !== '2026-11-23' ||
-    tarea222.finPlan !== '2026-11-24' ||
-    tarea222.holguraDias !== 11
-  ) {
-    throw new Error(
-      `Fechas u holgura inesperadas para 2.2.2 en seed: ${tarea222?.inicioPlan}..${tarea222?.finPlan}, holgura ${tarea222?.holguraDias} (esperado: 2026-11-23..2026-11-24, holgura 11)`,
-    );
-  }
-
-  const padresConHijas = new Set(
-    plan.tareas.map((t) => t.padreId).filter((id): id is number => id !== null),
-  );
-  const hojasCriticas = plan.tareas
-    .filter((t) => t.esCritica && !padresConHijas.has(t.id))
-    .map((t) => t.codigo)
-    .sort();
-  const hojasCriticasEsperadas = ['1.1.1', '1.1.2', '1.2.1', '2.1.1', '2.1.2', '2.2.1'].sort();
-
-  if (JSON.stringify(hojasCriticas) !== JSON.stringify(hojasCriticasEsperadas)) {
-    throw new Error(
-      `Hojas críticas inesperadas en seed: ${hojasCriticas.join(', ')} (esperadas: ${hojasCriticasEsperadas.join(', ')})`,
-    );
+  const tarea211 = plan.tareas.find((t) => t.codigo === '2.1.1');
+  const tarea212 = plan.tareas.find((t) => t.codigo === '2.1.2');
+  if (!tarea211 || !tarea211.esCritica || !tarea212 || !tarea212.esCritica) {
+    throw new Error('Las tareas 2.1.1 y 2.1.2 deben ser criticas en el seed.');
   }
 }
 
@@ -467,7 +743,8 @@ async function sembrarHitos(proyectoId: number): Promise<void> {
     return t;
   };
 
-  const hoy = hoyEnZona();
+  const reloj = new Reloj();
+  const hoy = reloj.hoy();
   const fechaRevision = sumarDiasHabiles(hoy, 3, calendario);
 
   const definicionHitos = [
@@ -509,7 +786,7 @@ async function sembrarHitos(proyectoId: number): Promise<void> {
     },
     {
       nombre: 'Sistema en marcha blanca',
-      tareaId: buscarTarea('2').id,
+      tareaId: buscarTarea('4').id,
       fechaObjetivo: fechaIsoADate('2027-03-31'),
       fechaCumplimiento: null,
       criterio: 'Uso en paralelo durante dos semanas sin incidentes graves',
@@ -573,111 +850,6 @@ async function sembrarHitos(proyectoId: number): Promise<void> {
   }
 }
 
-async function sembrarLineaBase(proyectoId: number): Promise<void> {
-  const lineasBaseExistentes = await prisma.lineaBase.findMany({ where: { proyectoId } });
-  for (const lb of lineasBaseExistentes) {
-    await prisma.lineaBaseTarea.deleteMany({ where: { lineaBaseId: lb.id } });
-    await prisma.lineaBase.delete({ where: { id: lb.id } });
-  }
-
-  const tareas = await prisma.tarea.findMany({
-    where: { proyectoId },
-    orderBy: { codigo: 'asc' },
-  });
-
-  const padresIds = new Set(tareas.map((t) => t.padreId).filter((id): id is number => id !== null));
-  const hojas = tareas.filter((t) => !padresIds.has(t.id));
-  const costoPlanTotal = hojas.reduce((s, t) => s + Number(t.costoPlan), 0);
-
-  const lb = await prisma.lineaBase.create({
-    data: {
-      proyectoId,
-      version: 1,
-      descripcion: 'Línea base inicial',
-      fechaFinProyecto: fechaIsoADate('2026-12-10'),
-      costoPlanTotal: new Prisma.Decimal(costoPlanTotal),
-      tareas: {
-        create: tareas.map((t) => ({
-          tareaId: t.id,
-          codigo: t.codigo,
-          nombre: t.nombre,
-          nivel: t.nivel,
-          duracionDias: t.duracionDias,
-          inicioPlan: t.inicioPlan,
-          finPlan: t.finPlan,
-          costoPlan: t.costoPlan,
-        })),
-      },
-    },
-    include: { tareas: true },
-  });
-
-  if (lb.tareas.length !== 14) {
-    throw new Error(
-      `Conteo inesperado de tareas en línea base: ${lb.tareas.length} (esperado: 14)`,
-    );
-  }
-
-  const sc003 = await prisma.solicitudCambio.findFirst({
-    where: { proyectoId, codigo: 'SC-003' },
-  });
-
-  if (sc003) {
-    const tareasV2 = tareas.map((t) => {
-      if (t.codigo === '1.2.1') {
-        const finPlanV2 = fechaIsoADate('2026-11-18');
-        return {
-          tareaId: t.id,
-          codigo: t.codigo,
-          nombre: t.nombre,
-          nivel: t.nivel,
-          duracionDias: t.duracionDias + 3,
-          inicioPlan: t.inicioPlan,
-          finPlan: finPlanV2,
-          costoPlan: new Prisma.Decimal(Number(t.costoPlan) + 300000),
-        };
-      }
-      if (t.codigo === '1.2' || t.codigo === '1') {
-        const finPlanV2 = fechaIsoADate('2026-11-18');
-        return {
-          tareaId: t.id,
-          codigo: t.codigo,
-          nombre: t.nombre,
-          nivel: t.nivel,
-          duracionDias: t.duracionDias,
-          inicioPlan: t.inicioPlan,
-          finPlan: finPlanV2,
-          costoPlan: new Prisma.Decimal(Number(t.costoPlan) + 300000),
-        };
-      }
-      return {
-        tareaId: t.id,
-        codigo: t.codigo,
-        nombre: t.nombre,
-        nivel: t.nivel,
-        duracionDias: t.duracionDias,
-        inicioPlan: t.inicioPlan,
-        finPlan: t.finPlan,
-        costoPlan: t.costoPlan,
-      };
-    });
-
-    await prisma.lineaBase.create({
-      data: {
-        proyectoId,
-        version: 2,
-        descripcion: 'Aprobación de cambio SC-003',
-        solicitudCambioId: sc003.id,
-        fechaFinProyecto: fechaIsoADate('2026-12-15'),
-        costoPlanTotal: new Prisma.Decimal(costoPlanTotal + 300000),
-        tareas: {
-          create: tareasV2,
-        },
-      },
-    });
-  }
-}
-
 async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
   const conteo = await prisma.solicitudCambio.count({ where: { proyectoId } });
   if (conteo > 0) return;
@@ -737,6 +909,9 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
         [1, 'iniciar'],
         [1, 'completar'],
         [2, 'iniciar'],
+        [2, 'completar'],
+        [3, 'iniciar'],
+        [3, 'completar'],
       ],
     },
     {
@@ -1004,187 +1179,6 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
   }
 }
 
-async function sembrarDemostracionGantt(proyectoId: number, fechaInicioIso: string): Promise<void> {
-  const conteo = await prisma.tarea.count({ where: { proyectoId } });
-  if (conteo > 0) return;
-
-  const subactividadesCreadas: Array<{ id: number; codigo: string }> = [];
-  let ordenSubactividad = 0;
-
-  for (let e = 1; e <= 4; e += 1) {
-    const etapa = await prisma.tarea.create({
-      data: {
-        proyectoId,
-        padreId: null,
-        nivel: NivelTarea.ETAPA,
-        codigo: `~${e}`,
-        orden: e,
-        nombre: `Etapa ${e}`,
-        responsable: 'Jefe de Proyecto',
-        duracionDias: 1,
-        porcentajeAvance: new Prisma.Decimal(0),
-      },
-    });
-
-    for (let a = 1; a <= 2; a += 1) {
-      const act = await prisma.tarea.create({
-        data: {
-          proyectoId,
-          padreId: etapa.id,
-          nivel: NivelTarea.ACTIVIDAD,
-          codigo: `~${e}.${a}`,
-          orden: a,
-          nombre: `Actividad ${e}.${a}`,
-          responsable: 'Jefe de Taller',
-          duracionDias: 1,
-          porcentajeAvance: new Prisma.Decimal(0),
-        },
-      });
-
-      for (let s = 1; s <= 6; s += 1) {
-        ordenSubactividad += 1;
-        const duracion = 2 + ((e + a + s) % 5);
-        let avance = 0;
-        let inicioReal: Date | null = null;
-        let finReal: Date | null = null;
-        if (ordenSubactividad <= 6) {
-          avance = 100;
-          inicioReal = fechaIsoADate(sumarDiasHabiles(fechaInicioIso, 0, CALENDARIO_POR_DEFECTO));
-          finReal = fechaIsoADate(
-            sumarDiasHabiles(fechaInicioIso, duracion, CALENDARIO_POR_DEFECTO),
-          );
-        } else if (ordenSubactividad <= 10) {
-          avance = 50;
-          inicioReal = fechaIsoADate(sumarDiasHabiles(fechaInicioIso, 5, CALENDARIO_POR_DEFECTO));
-        }
-
-        const sub = await prisma.tarea.create({
-          data: {
-            proyectoId,
-            padreId: act.id,
-            nivel: NivelTarea.SUBACTIVIDAD,
-            codigo: `~${e}.${a}.${s}`,
-            orden: s,
-            nombre: `Subactividad ${e}.${a}.${s}`,
-            responsable: 'Desarrollador',
-            duracionDias: duracion,
-            porcentajeAvance: new Prisma.Decimal(avance),
-            inicioReal,
-            finReal,
-          },
-        });
-        subactividadesCreadas.push({ id: sub.id, codigo: `${e}.${a}.${s}` });
-      }
-    }
-  }
-
-  const todas = await prisma.tarea.findMany({ where: { proyectoId } });
-  const numeracion = numerarArbol(todas);
-  for (const t of todas) {
-    const num = numeracion.get(t.id);
-    if (!num) continue;
-    await prisma.tarea.update({
-      where: { id: t.id },
-      data: { codigo: num.codigo, orden: num.orden },
-    });
-  }
-
-  const tipos = [TipoDependencia.FS, TipoDependencia.SS, TipoDependencia.FF, TipoDependencia.SF];
-
-  const datosDeps: Array<{
-    proyectoId: number;
-    predecesoraId: number;
-    sucesoraId: number;
-    tipo: TipoDependencia;
-    desfaseDias: number;
-  }> = [];
-
-  for (let i = 1; i < subactividadesCreadas.length; i += 1) {
-    const tipo = tipos[i % 4]!;
-    const desfaseDias = tipo === TipoDependencia.SF ? 3 : 1;
-    datosDeps.push({
-      proyectoId,
-      predecesoraId: subactividadesCreadas[i - 1]!.id,
-      sucesoraId: subactividadesCreadas[i]!.id,
-      tipo,
-      desfaseDias,
-    });
-  }
-
-  await prisma.dependencia.createMany({
-    data: datosDeps,
-    skipDuplicates: true,
-  });
-
-  const calendario = await cargarCalendarioSemilla(proyectoId);
-  const tareasActualizadas = await prisma.tarea.findMany({ where: { proyectoId } });
-  const deps = await prisma.dependencia.findMany({ where: { proyectoId } });
-
-  const tareasPlan: TareaPlanificacion[] = tareasActualizadas.map((t) => ({
-    id: t.id,
-    codigo: t.codigo,
-    padreId: t.padreId,
-    duracionDias: t.duracionDias,
-    fechaFija: t.fechaFija ? dateAFechaIso(t.fechaFija) : null,
-    inicioReal: t.inicioReal ? dateAFechaIso(t.inicioReal) : null,
-    finReal: t.finReal ? dateAFechaIso(t.finReal) : null,
-    porcentajeAvance: Number(t.porcentajeAvance),
-  }));
-
-  const dependenciasPlan: DependenciaCronograma[] = deps.map((d) => ({
-    predecesoraId: d.predecesoraId,
-    sucesoraId: d.sucesoraId,
-    tipo: d.tipo,
-    desfaseDias: d.desfaseDias,
-  }));
-
-  const plan = planificarProyecto(tareasPlan, dependenciasPlan, calendario, fechaInicioIso);
-
-  for (const calc of plan.tareas) {
-    await prisma.tarea.update({
-      where: { id: calc.id },
-      data: {
-        duracionDias: calc.duracionDias,
-        inicioPlan: fechaIsoADate(calc.inicioPlan),
-        finPlan: fechaIsoADate(calc.finPlan),
-        inicioTardio: fechaIsoADate(calc.inicioTardio),
-        finTardio: fechaIsoADate(calc.finTardio),
-        holguraDias: calc.holguraDias,
-        esCritica: calc.esCritica,
-        inicioReal: calc.inicioReal ? fechaIsoADate(calc.inicioReal) : null,
-        finReal: calc.finReal ? fechaIsoADate(calc.finReal) : null,
-        porcentajeAvance: new Prisma.Decimal(calc.porcentajeAvance),
-      },
-    });
-  }
-
-  if (plan.tareas.length !== 60) {
-    throw new Error(
-      `Se esperaban 60 tareas en el proyecto de demostración, se obtuvieron ${plan.tareas.length}`,
-    );
-  }
-
-  const tiposPresentes = new Set(deps.map((d) => d.tipo));
-  if (tiposPresentes.size !== 4) {
-    throw new Error(
-      `Se esperaban los 4 tipos de dependencia, se encontraron ${tiposPresentes.size}`,
-    );
-  }
-
-  const hoy = hoyEnZona();
-  const atrasadas = plan.tareas.filter((t) => estaAtrasada(t, hoy));
-  if (atrasadas.length === 0) {
-    throw new Error('Se esperaba al menos una tarea atrasada en el proyecto de demostración.');
-  }
-
-  if (plan.finProyecto) {
-    await prisma.proyecto.update({
-      where: { id: proyectoId },
-      data: { fechaFin: fechaIsoADate(plan.finProyecto) },
-    });
-  }
-}
-
 async function sembrarCatalogos(): Promise<void> {
   for (const tipo of TIPOS_RECURSO) {
     await prisma.tipoRecurso.upsert({
@@ -1318,6 +1312,12 @@ async function sembrarAsignaciones(proyectoId: number): Promise<void> {
   const camila = await prisma.profesional.findFirstOrThrow({
     where: { nombre: 'Camila Rojas' },
   });
+  const matias = await prisma.profesional.findFirstOrThrow({
+    where: { nombre: 'Matías Soto' },
+  });
+  const diego = await prisma.profesional.findFirstOrThrow({
+    where: { nombre: 'Diego Pizarro' },
+  });
   const recursoEscaner = await prisma.recurso.findFirstOrThrow({
     where: { nombre: 'Escáner de diagnóstico OBD-II' },
   });
@@ -1327,6 +1327,9 @@ async function sembrarAsignaciones(proyectoId: number): Promise<void> {
   const t112 = tareas.find((t) => t.codigo === '1.1.2');
   const t121 = tareas.find((t) => t.codigo === '1.2.1');
   const t122 = tareas.find((t) => t.codigo === '1.2.2');
+  const t211 = tareas.find((t) => t.codigo === '2.1.1');
+  const t321 = tareas.find((t) => t.codigo === '3.2.1');
+  const t431 = tareas.find((t) => t.codigo === '4.3.1');
   if (!t111 || !t112 || !t121 || !t122) return;
 
   const horasPlan111 = calcularHorasPlan(t111.duracionDias, Number(rodrigo.horasDiarias), 50);
@@ -1441,6 +1444,78 @@ async function sembrarAsignaciones(proyectoId: number): Promise<void> {
       costoUnitarioAplicado: recursoEscaner.costoUnitario,
     },
   });
+
+  if (t211) {
+    const horasPlan211 = calcularHorasPlan(t211.duracionDias, Number(matias.horasDiarias), 50);
+    await prisma.asignacion.upsert({
+      where: {
+        tareaId_profesionalId: {
+          tareaId: t211.id,
+          profesionalId: matias.id,
+        },
+      },
+      create: {
+        tareaId: t211.id,
+        profesionalId: matias.id,
+        dedicacion: new Prisma.Decimal(50),
+        horasPlan: new Prisma.Decimal(horasPlan211),
+        tarifaAplicada: matias.tarifaHora,
+      },
+      update: {
+        dedicacion: new Prisma.Decimal(50),
+        horasPlan: new Prisma.Decimal(horasPlan211),
+        tarifaAplicada: matias.tarifaHora,
+      },
+    });
+  }
+
+  if (t321) {
+    const horasPlan321 = calcularHorasPlan(t321.duracionDias, Number(diego.horasDiarias), 40);
+    await prisma.asignacion.upsert({
+      where: {
+        tareaId_profesionalId: {
+          tareaId: t321.id,
+          profesionalId: diego.id,
+        },
+      },
+      create: {
+        tareaId: t321.id,
+        profesionalId: diego.id,
+        dedicacion: new Prisma.Decimal(40),
+        horasPlan: new Prisma.Decimal(horasPlan321),
+        tarifaAplicada: diego.tarifaHora,
+      },
+      update: {
+        dedicacion: new Prisma.Decimal(40),
+        horasPlan: new Prisma.Decimal(horasPlan321),
+        tarifaAplicada: diego.tarifaHora,
+      },
+    });
+  }
+
+  if (t431) {
+    const horasPlan431 = calcularHorasPlan(t431.duracionDias, Number(rodrigo.horasDiarias), 30);
+    await prisma.asignacion.upsert({
+      where: {
+        tareaId_profesionalId: {
+          tareaId: t431.id,
+          profesionalId: rodrigo.id,
+        },
+      },
+      create: {
+        tareaId: t431.id,
+        profesionalId: rodrigo.id,
+        dedicacion: new Prisma.Decimal(30),
+        horasPlan: new Prisma.Decimal(horasPlan431),
+        tarifaAplicada: rodrigo.tarifaHora,
+      },
+      update: {
+        dedicacion: new Prisma.Decimal(30),
+        horasPlan: new Prisma.Decimal(horasPlan431),
+        tarifaAplicada: rodrigo.tarifaHora,
+      },
+    });
+  }
 }
 
 async function sembrarKpis(): Promise<void> {
@@ -1839,9 +1914,8 @@ async function recalcularProyectoSemilla(proyectoId: number): Promise<void> {
   }
 }
 
-async function sembrar(): Promise<void> {
+export async function sembrar(): Promise<void> {
   let proyectoPrincipalId: number | null = null;
-  let proyectoDemoId: number | null = null;
 
   for (const datos of PROYECTOS_SEMILLA) {
     const existente = await prisma.proyecto.findFirst({
@@ -1863,9 +1937,6 @@ async function sembrar(): Promise<void> {
       if (creado.nombre === 'AutoFix · Implementación') {
         proyectoPrincipalId = creado.id;
       }
-      if (creado.nombre === 'AutoFix · Demostración Gantt') {
-        proyectoDemoId = creado.id;
-      }
     } else {
       if (!existente.calendario) {
         const cal = await prisma.calendario.create({
@@ -1877,9 +1948,6 @@ async function sembrar(): Promise<void> {
       }
       if (existente.nombre === 'AutoFix · Implementación') {
         proyectoPrincipalId = existente.id;
-      }
-      if (existente.nombre === 'AutoFix · Demostración Gantt') {
-        proyectoDemoId = existente.id;
       }
     }
 
@@ -1903,12 +1971,6 @@ async function sembrar(): Promise<void> {
     await sembrarAsignaciones(proyectoPrincipalId);
     await recalcularCostosSemilla(proyectoPrincipalId);
     await sembrarSolicitudesCambio(proyectoPrincipalId);
-    await sembrarLineaBase(proyectoPrincipalId);
-  }
-
-  if (proyectoDemoId) {
-    const fechaInicioIso = sumarDiasHabiles(hoyEnZona(), -20, CALENDARIO_POR_DEFECTO);
-    await sembrarDemostracionGantt(proyectoDemoId, fechaInicioIso);
   }
 
   await sembrarKpis();
@@ -1932,10 +1994,6 @@ async function sembrar(): Promise<void> {
     }
   }
 
-  if (proyectoDemoId) {
-    await recalcularProyectoSemilla(proyectoDemoId);
-  }
-
   const tablas = await prisma.$queryRaw<{ total: bigint }[]>`
     SELECT count(*) AS total FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name <> '_prisma_migrations'
@@ -1943,9 +2001,11 @@ async function sembrar(): Promise<void> {
   console.log(`Seed completado: ${tablas[0]?.total ?? 0} tablas disponibles.`);
 }
 
-sembrar()
-  .catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+if (require.main === module) {
+  sembrar()
+    .catch((error: unknown) => {
+      console.error(error);
+      process.exitCode = 1;
+    })
+    .finally(() => prisma.$disconnect());
+}

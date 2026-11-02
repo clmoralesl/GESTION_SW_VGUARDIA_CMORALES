@@ -12,7 +12,7 @@ export function TarjetasResumen({ tarjetas }: TarjetasResumenProps) {
 
   return (
     <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md" radius="md" data-testid="tarjeta-avance">
         <Stack gap="xs">
           <Group justify="space-between">
             <Group gap="xs">
@@ -30,7 +30,7 @@ export function TarjetasResumen({ tarjetas }: TarjetasResumenProps) {
             ) : null}
           </Group>
           <Group align="baseline" gap="xs">
-            <Text size="xl" fw={700}>
+            <Text size="xl" fw={700} data-testid="valor-tarjeta">
               {avance.real !== null ? `${avance.real}%` : 'N/D'}
             </Text>
             <Text size="sm" c="dimmed">
@@ -51,7 +51,7 @@ export function TarjetasResumen({ tarjetas }: TarjetasResumenProps) {
         </Stack>
       </Card>
 
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md" radius="md" data-testid="tarjeta-spi">
         <Stack gap="xs">
           <Group justify="space-between">
             <Group gap="xs">
@@ -69,7 +69,7 @@ export function TarjetasResumen({ tarjetas }: TarjetasResumenProps) {
             ) : null}
           </Group>
           <Group align="baseline" gap="xs">
-            <Text size="xl" fw={700}>
+            <Text size="xl" fw={700} data-testid="valor-tarjeta">
               {spi.valor !== null ? spi.valor : 'N/D'}
             </Text>
           </Group>
@@ -82,7 +82,7 @@ export function TarjetasResumen({ tarjetas }: TarjetasResumenProps) {
         </Stack>
       </Card>
 
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md" radius="md" data-testid="tarjeta-cpi">
         <Stack gap="xs">
           <Group justify="space-between">
             <Group gap="xs">
@@ -100,7 +100,7 @@ export function TarjetasResumen({ tarjetas }: TarjetasResumenProps) {
             ) : null}
           </Group>
           <Group align="baseline" gap="xs">
-            <Text size="xl" fw={700}>
+            <Text size="xl" fw={700} data-testid="valor-tarjeta">
               {cpi.valor !== null ? cpi.valor : 'N/D'}
             </Text>
           </Group>
@@ -113,7 +113,7 @@ export function TarjetasResumen({ tarjetas }: TarjetasResumenProps) {
         </Stack>
       </Card>
 
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md" radius="md" data-testid="tarjeta-costo">
         <Stack gap="xs">
           <Group justify="space-between">
             <Group gap="xs">
@@ -131,7 +131,7 @@ export function TarjetasResumen({ tarjetas }: TarjetasResumenProps) {
             ) : null}
           </Group>
           <Group align="baseline" gap="xs">
-            <Text size="lg" fw={700}>
+            <Text size="lg" fw={700} data-testid="valor-tarjeta">
               {formatearMonto(costo.costoReal)}
             </Text>
             <Text size="xs" c="dimmed">

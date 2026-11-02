@@ -25,7 +25,17 @@ export const BarraTarea = memo(function BarraTarea({
   alIniciarArrastre,
   paleta,
 }: BarraTareaProps) {
-  const { tarea, barra, lineaBase, esResumen, esCritica, estaAtrasada, avance, y } = fila;
+  const {
+    tarea,
+    barra,
+    lineaBase,
+    lineaBaseFechas,
+    esResumen,
+    esCritica,
+    estaAtrasada,
+    avance,
+    y,
+  } = fila;
 
   if (!barra) return null;
 
@@ -38,6 +48,9 @@ export const BarraTarea = memo(function BarraTarea({
     puedeEditar && !esResumen && tarea.duracionDias > 0 && tarea.finReal === null;
 
   const textoAria = `${tarea.codigo} ${tarea.nombre}, del ${formatearFecha(tarea.inicioPlan)} al ${formatearFecha(tarea.finPlan)}, avance ${Math.round(avance)}%, ${esCritica ? 'crítica' : 'no crítica'}`;
+  const textoAriaLineaBase = lineaBaseFechas
+    ? `Línea base ${tarea.codigo}: del ${formatearFecha(lineaBaseFechas.inicioPlan)} al ${formatearFecha(lineaBaseFechas.finPlan)}`
+    : `Línea base: ${tarea.codigo}`;
 
   const sufijoBloqueo = !puedeEditar && motivoBloqueo ? `\nBloqueado: ${motivoBloqueo}` : '';
   const tituloTooltip = `${tarea.codigo} ${tarea.nombre}\nInicio: ${formatearFecha(tarea.inicioPlan)} | Fin: ${formatearFecha(tarea.finPlan)}\nDuración: ${tarea.duracionDias} d | Avance: ${avance}%\n${esCritica ? 'Crítica' : 'Holgura: ' + tarea.holguraDias + ' d'}${estaAtrasada ? '\nAtrasada: ' + fila.diasAtraso + ' días' : ''}${sufijoBloqueo}`;
@@ -86,6 +99,7 @@ export const BarraTarea = memo(function BarraTarea({
             fill={paleta.barraLineaBase}
             rx={1}
             data-testid={`linea-base-${tarea.codigo}`}
+            aria-label={textoAriaLineaBase}
           >
             <title>{`Línea base: ${tarea.codigo}`}</title>
           </rect>
@@ -206,6 +220,7 @@ export const BarraTarea = memo(function BarraTarea({
           fill={paleta.barraLineaBase}
           rx={1}
           data-testid={`linea-base-${tarea.codigo}`}
+          aria-label={textoAriaLineaBase}
         >
           <title>{`Línea base: ${tarea.codigo}`}</title>
         </rect>

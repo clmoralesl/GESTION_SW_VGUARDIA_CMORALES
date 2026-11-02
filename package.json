@@ -12,12 +12,14 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @autofix/e2e test:e2e",
     "test:bd": "docker compose exec -e DATABASE_URL=postgresql://autofix:autofix@db:5432/autofix_pruebas api pnpm --filter @autofix/api test:bd",
     "typecheck": "pnpm -r typecheck",
     "db:migrate": "docker compose exec api pnpm --filter @autofix/api db:migrate",
     "db:deploy": "docker compose exec api pnpm --filter @autofix/api db:deploy",
     "db:reset": "docker compose exec api pnpm --filter @autofix/api db:reset",
     "db:seed": "docker compose exec api pnpm --filter @autofix/api db:seed",
+    "caso:xlsx": "docker compose exec api pnpm --filter @autofix/api caso:xlsx",
     "db:erd": "pnpm --filter @autofix/api db:erd && prettier --write docs/modelo-datos.md"
   },
   "devDependencies": {

@@ -16,6 +16,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset --force",
     "db:seed": "prisma db seed",
+    "caso:xlsx": "tsx scripts/generar-caso-prueba.ts",
     "db:erd": "prisma generate && tsx scripts/generar-modelo-datos.ts"
   },
   "prisma": {

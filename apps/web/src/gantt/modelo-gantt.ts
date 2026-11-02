@@ -35,6 +35,7 @@ export interface FilaGantt {
   esResumen: boolean;
   barra: BordesBarra | null;
   lineaBase: BordesBarra | null;
+  lineaBaseFechas?: { inicioPlan: string; finPlan: string } | null;
   avance: number;
   esCritica: boolean;
   estaAtrasada: boolean;
@@ -165,6 +166,10 @@ export function construirModeloGantt(opciones: OpcionesConstruirModeloGantt): Mo
       esResumen: t.tieneHijas,
       barra,
       lineaBase: lbBarra,
+      lineaBaseFechas:
+        lb && lb.inicioPlan && lb.finPlan
+          ? { inicioPlan: lb.inicioPlan, finPlan: lb.finPlan }
+          : null,
       avance: Number(t.porcentajeAvance),
       esCritica: t.esCritica,
       estaAtrasada: estaAtrasada(t, hoy),

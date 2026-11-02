@@ -27,7 +27,7 @@ export function TarjetasResumen({ resumen }: TarjetasResumenProps) {
 
   return (
     <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing="md">
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md" radius="md" data-testid="tarjeta-total">
         <Stack gap="xs">
           <Group justify="space-between">
             <Text size="xs" c="dimmed" fw={600} tt="uppercase">
@@ -46,7 +46,7 @@ export function TarjetasResumen({ resumen }: TarjetasResumenProps) {
         </Stack>
       </Card>
 
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md" radius="md" data-testid="tarjeta-abierta">
         <Stack gap="xs">
           <Group justify="space-between">
             <Text size="xs" c="dimmed" fw={600} tt="uppercase">
@@ -65,7 +65,7 @@ export function TarjetasResumen({ resumen }: TarjetasResumenProps) {
         </Stack>
       </Card>
 
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md" radius="md" data-testid="tarjeta-aprobada">
         <Stack gap="xs">
           <Group justify="space-between">
             <Text size="xs" c="dimmed" fw={600} tt="uppercase">
@@ -84,7 +84,7 @@ export function TarjetasResumen({ resumen }: TarjetasResumenProps) {
         </Stack>
       </Card>
 
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md" radius="md" data-testid="tarjeta-rechazada">
         <Stack gap="xs">
           <Group justify="space-between">
             <Text size="xs" c="dimmed" fw={600} tt="uppercase">

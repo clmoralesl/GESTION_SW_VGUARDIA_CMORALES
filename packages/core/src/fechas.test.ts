@@ -9,6 +9,8 @@ import {
   fechaIsoADate,
   fechaLocalIso,
   hoyEnZona,
+  inicioDiaEnZona,
+  rangoFechasBitacora,
   sumarDiasCorridos,
 } from './fechas';
 import { validar } from './validacion';
@@ -64,5 +66,55 @@ describe('fechas', () => {
     expect(hoyEnZona(new Date('2026-10-31T03:00:00Z'))).toBe('2026-10-31');
     expect(hoyEnZona(new Date('2026-07-01T03:59:00Z'))).toBe('2026-06-30');
     expect(hoyEnZona(new Date('2026-07-01T04:00:00Z'))).toBe('2026-07-01');
+  });
+
+  it('calcula inicio del dia en zona horaria considerando cambios de horario de verano e invierno', () => {
+    const d1 = inicioDiaEnZona('2026-04-04');
+    expect(d1.toISOString()).toBe('2026-04-04T03:00:00.000Z');
+    expect(hoyEnZona(d1)).toBe('2026-04-04');
+    expect(hoyEnZona(new Date(d1.getTime() - 1))).toBe('2026-04-03');
+
+    const d2 = inicioDiaEnZona('2026-04-05');
+    expect(d2.toISOString()).toBe('2026-04-05T04:00:00.000Z');
+    expect(hoyEnZona(d2)).toBe('2026-04-05');
+    expect(hoyEnZona(new Date(d2.getTime() - 1))).toBe('2026-04-04');
+
+    const d3 = inicioDiaEnZona('2026-07-15');
+    expect(d3.toISOString()).toBe('2026-07-15T04:00:00.000Z');
+    expect(hoyEnZona(d3)).toBe('2026-07-15');
+    expect(hoyEnZona(new Date(d3.getTime() - 1))).toBe('2026-07-14');
+
+    const d4 = inicioDiaEnZona('2026-09-05');
+    expect(d4.toISOString()).toBe('2026-09-05T04:00:00.000Z');
+    expect(hoyEnZona(d4)).toBe('2026-09-05');
+    expect(hoyEnZona(new Date(d4.getTime() - 1))).toBe('2026-09-04');
+
+    const d5 = inicioDiaEnZona('2026-09-06');
+    expect(d5.toISOString()).toBe('2026-09-06T04:00:00.000Z');
+    expect(hoyEnZona(d5)).toBe('2026-09-06');
+    expect(hoyEnZona(new Date(d5.getTime() - 1))).toBe('2026-09-05');
+
+    const d6 = inicioDiaEnZona('2026-11-02');
+    expect(d6.toISOString()).toBe('2026-11-02T03:00:00.000Z');
+    expect(hoyEnZona(d6)).toBe('2026-11-02');
+    expect(hoyEnZona(new Date(d6.getTime() - 1))).toBe('2026-11-01');
+  });
+
+  it('construye rango de fechas para bitacora con limites inclusivos de dia', () => {
+    const rangoCompleto = rangoFechasBitacora('2026-11-02', '2026-11-02');
+    expect(rangoCompleto.gte?.toISOString()).toBe('2026-11-02T03:00:00.000Z');
+    expect(rangoCompleto.lt?.toISOString()).toBe('2026-11-03T03:00:00.000Z');
+
+    const soloDesde = rangoFechasBitacora('2026-11-02');
+    expect(soloDesde.gte?.toISOString()).toBe('2026-11-02T03:00:00.000Z');
+    expect(soloDesde.lt).toBeUndefined();
+
+    const soloHasta = rangoFechasBitacora(undefined, '2026-11-02');
+    expect(soloHasta.gte).toBeUndefined();
+    expect(soloHasta.lt?.toISOString()).toBe('2026-11-03T03:00:00.000Z');
+
+    const sinFiltro = rangoFechasBitacora();
+    expect(sinFiltro.gte).toBeUndefined();
+    expect(sinFiltro.lt).toBeUndefined();
   });
 });

@@ -48,3 +48,36 @@ export function diasCorridosEntre(inicioIso: string, finIso: string): number {
     (fechaIsoADate(finIso).getTime() - fechaIsoADate(inicioIso).getTime()) / MILISEGUNDOS_DIA,
   );
 }
+
+export function inicioDiaEnZona(fechaIso: string, zona = 'America/Santiago'): Date {
+  let bajo = new Date(`${fechaIso}T00:00:00.000Z`).getTime() - 15 * 3600 * 1000;
+  let alto = new Date(`${fechaIso}T00:00:00.000Z`).getTime() + 15 * 3600 * 1000;
+  let res = alto;
+  while (bajo <= alto) {
+    const medio = Math.floor((bajo + alto) / 2);
+    const fecha = hoyEnZona(new Date(medio), zona);
+    if (fecha >= fechaIso) {
+      res = medio;
+      alto = medio - 1;
+    } else {
+      bajo = medio + 1;
+    }
+  }
+  return new Date(res);
+}
+
+export function rangoFechasBitacora(
+  desde?: string,
+  hasta?: string,
+  zona = 'America/Santiago',
+): { gte?: Date; lt?: Date } {
+  const resultado: { gte?: Date; lt?: Date } = {};
+  if (desde) {
+    resultado.gte = inicioDiaEnZona(desde, zona);
+  }
+  if (hasta) {
+    const diaDespues = sumarDiasCorridos(hasta, 1);
+    resultado.lt = inicioDiaEnZona(diaDespues, zona);
+  }
+  return resultado;
+}

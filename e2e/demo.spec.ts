@@ -343,5 +343,15 @@ test.describe('Demostración del caso de prueba mínimo', () => {
         .locator('.mantine-Text-root')
         .filter({ hasText: /^1$/ }),
     ).toBeVisible();
+
+    await page.goto('/bitacora');
+    await expect(page.getByRole('heading', { name: 'Bitácora de cambios' })).toBeVisible({
+      timeout: 30_000,
+    });
+    const enlaceSc002 = page.getByRole('link', { name: /Aprobación SC-002/i }).first();
+    await expect(enlaceSc002).toBeVisible({ timeout: 30_000 });
+    await enlaceSc002.click();
+    await expect(page).toHaveURL(/\/solicitudes-cambio\/2|\/cambios\/2/);
+    await expect(page.getByText('SC-002', { exact: true })).toBeVisible({ timeout: 30_000 });
   });
 });

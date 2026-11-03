@@ -15,5 +15,5 @@ export const MODULOS: Modulo[] = [
   { ruta: 'tablero-proyecto', titulo: 'Tablero proyecto', disponible: true },
   { ruta: 'tablero-cambio', titulo: 'Tablero cambio', disponible: true },
   { ruta: 'importar-exportar', titulo: 'Importar/Exportar', disponible: true },
-  { ruta: 'bitacora', titulo: 'Bitácora', disponible: false },
+  { ruta: 'bitacora', titulo: 'Bitácora', disponible: true },
 ];

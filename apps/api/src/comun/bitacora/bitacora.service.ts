@@ -106,4 +106,22 @@ export class BitacoraService {
       },
     });
   }
+
+  async registrarImportacion(
+    tx: Prisma.TransactionClient,
+    contexto: { proyectoId: number; rol: Rol },
+    conteos: Record<string, number>,
+  ): Promise<void> {
+    await tx.bitacora.create({
+      data: {
+        proyectoId: contexto.proyectoId,
+        entidad: 'Proyecto',
+        entidadId: contexto.proyectoId,
+        rol: ROL_BD[contexto.rol],
+        accion: AccionBitacora.IMPORTAR,
+        valorNuevo: aJson(conteos),
+        origen: 'Importación de proyecto',
+      },
+    });
+  }
 }

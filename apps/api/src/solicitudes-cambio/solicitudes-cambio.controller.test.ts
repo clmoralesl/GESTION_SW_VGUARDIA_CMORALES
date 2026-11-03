@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { configurarApp } from '../configurar-app';
 import { SolicitudesCambioController } from './solicitudes-cambio.controller';
 import { DetalleSolicitudCambio, SolicitudesCambioService } from './solicitudes-cambio.service';
+import { BitacoraLecturaService } from '../comun/bitacora/bitacora-lectura.service';
 
 describe('SolicitudesCambioController', () => {
   let app: INestApplication;
@@ -57,10 +58,23 @@ describe('SolicitudesCambioController', () => {
     rechazar: vi.fn().mockResolvedValue(solicitudMock),
   };
 
+  const bitacoraLecturaMock = {
+    obtenerHistorialSolicitud: vi.fn().mockResolvedValue({
+      registros: [],
+      total: 0,
+      pagina: 1,
+      tamanoPagina: 25,
+      totalPaginas: 0,
+    }),
+  };
+
   beforeAll(async () => {
     const modulo: TestingModule = await Test.createTestingModule({
       controllers: [SolicitudesCambioController],
-      providers: [{ provide: SolicitudesCambioService, useValue: servicioMock }],
+      providers: [
+        { provide: SolicitudesCambioService, useValue: servicioMock },
+        { provide: BitacoraLecturaService, useValue: bitacoraLecturaMock },
+      ],
     }).compile();
 
     app = modulo.createNestApplication();
@@ -285,5 +299,26 @@ describe('SolicitudesCambioController', () => {
       .set('X-Rol', 'CC')
       .send({ motivo: 'Motivo valido' });
     expect(resRechazarCc.status).toBe(200);
+  });
+
+  it('permite GET /solicitudes-cambio/:id/historial a JP y CC y rechaza con 400 parametros invalidos', async () => {
+    const resJp = await request(app.getHttpServer())
+      .get('/solicitudes-cambio/1/historial?pagina=1&tamanoPagina=10')
+      .set('X-Rol', 'JP');
+    expect(resJp.status).toBe(200);
+    expect(bitacoraLecturaMock.obtenerHistorialSolicitud).toHaveBeenCalledWith(1, {
+      pagina: 1,
+      tamanoPagina: 10,
+    });
+
+    const resCc = await request(app.getHttpServer())
+      .get('/solicitudes-cambio/1/historial')
+      .set('X-Rol', 'CC');
+    expect(resCc.status).toBe(200);
+
+    const resInvalido = await request(app.getHttpServer())
+      .get('/solicitudes-cambio/1/historial?tamanoPagina=0')
+      .set('X-Rol', 'JP');
+    expect(resInvalido.status).toBe(400);
   });
 });

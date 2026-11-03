@@ -38,4 +38,36 @@ describe('BitacoraService', () => {
       },
     });
   });
+
+  it('registra importacion con accion IMPORTAR y conteos en valorNuevo', async () => {
+    const servicio = new BitacoraService();
+    const createMock = vi.fn().mockResolvedValue({});
+    const tx = {
+      bitacora: {
+        create: createMock,
+      },
+    } as unknown as Prisma.TransactionClient;
+
+    const conteos = {
+      tareas: 36,
+      dependencias: 40,
+      asignaciones: 25,
+      hitos: 6,
+      solicitudes: 3,
+    };
+
+    await servicio.registrarImportacion(tx, { proyectoId: 1, rol: 'JP' }, conteos);
+
+    expect(createMock).toHaveBeenCalledWith({
+      data: {
+        proyectoId: 1,
+        entidad: 'Proyecto',
+        entidadId: 1,
+        rol: 'JEFE_PROYECTO',
+        accion: AccionBitacora.IMPORTAR,
+        valorNuevo: conteos,
+        origen: 'Importación de proyecto',
+      },
+    });
+  });
 });

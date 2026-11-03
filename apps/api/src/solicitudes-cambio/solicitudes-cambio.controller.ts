@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Res,
   UploadedFile,
   UseInterceptors,
@@ -21,6 +22,7 @@ import {
   esquemaCrearImpacto,
   esquemaCrearSolicitud,
   esquemaOmitirEtapa,
+  esquemaPaginacion,
   esquemaRechazarSolicitud,
   PERMISOS,
   type EntradaActualizarAccionCorrectiva,
@@ -31,6 +33,8 @@ import {
   type EntradaCrearSolicitud,
   type EntradaOmitirEtapa,
   type EntradaRechazarSolicitud,
+  type ParametrosPaginacion,
+  type RespuestaBitacora,
   type ResultadoSimulacion,
   type Rol,
 } from '@autofix/core';
@@ -50,6 +54,7 @@ import {
   DetalleSolicitudCambio,
   SolicitudesCambioService,
 } from './solicitudes-cambio.service';
+import { BitacoraLecturaService } from '../comun/bitacora/bitacora-lectura.service';
 
 interface RespuestaDescarga {
   setHeader(nombre: string, valor: string): void;
@@ -58,7 +63,10 @@ interface RespuestaDescarga {
 
 @Controller()
 export class SolicitudesCambioController {
-  constructor(private readonly service: SolicitudesCambioService) {}
+  constructor(
+    private readonly service: SolicitudesCambioService,
+    private readonly bitacoraLectura: BitacoraLecturaService,
+  ) {}
 
   @Get('proyectos/:proyectoId/solicitudes-cambio')
   listar(
@@ -82,6 +90,15 @@ export class SolicitudesCambioController {
   @Get('solicitudes-cambio/:id')
   obtener(@Param('id', new PipeIdRuta('id')) id: number): Promise<DetalleSolicitudCambio> {
     return this.service.obtener(id);
+  }
+
+  @Roles('JP', 'CC')
+  @Get('solicitudes-cambio/:id/historial')
+  obtenerHistorial(
+    @Param('id', new PipeIdRuta('id')) id: number,
+    @Query(new PipeValidacionZod(esquemaPaginacion)) paginacion: ParametrosPaginacion,
+  ): Promise<RespuestaBitacora> {
+    return this.bitacoraLectura.obtenerHistorialSolicitud(id, paginacion);
   }
 
   @Roles(...PERMISOS.gestionarSolicitudesCambio)

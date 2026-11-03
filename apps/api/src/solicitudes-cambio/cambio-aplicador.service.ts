@@ -492,6 +492,7 @@ export class CambioAplicadorService {
     tx: Prisma.TransactionClient,
     padre: Tarea,
     rol: Rol,
+    solicitudCambioId?: number,
   ): Promise<void> {
     const hijas = await tx.tarea.count({ where: { padreId: padre.id } });
     if (hijas > 0) return;
@@ -510,7 +511,13 @@ export class CambioAplicadorService {
     await tx.tarea.update({ where: { id: padre.id }, data: { fechaFija: null } });
     await this.bitacora.registrarCambios(
       tx,
-      { proyectoId: padre.proyectoId, entidad: 'Tarea', entidadId: padre.id, rol },
+      {
+        proyectoId: padre.proyectoId,
+        entidad: 'Tarea',
+        entidadId: padre.id,
+        rol,
+        ...(solicitudCambioId !== undefined ? { solicitudCambioId } : {}),
+      },
       AccionBitacora.ACTUALIZAR,
       [{ campo: 'fechaFija', anterior: dateAFechaIso(padre.fechaFija), nuevo: null }],
     );
@@ -736,7 +743,7 @@ export class CambioAplicadorService {
             'No se pueden crear subtareas bajo una tarea con asignaciones.',
           );
         }
-        await this.prepararPadreParaSubtareas(tx, padre, rol);
+        await this.prepararPadreParaSubtareas(tx, padre, rol, solicitud.id);
       }
 
       const tareasExistentes = await tx.tarea.findMany({

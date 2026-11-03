@@ -25,6 +25,7 @@ import { ExcepcionApi } from '../comun/errores/excepcion-api';
 import { PrismaService } from '../prisma/prisma.service';
 import { Reloj } from '../comun/reloj/reloj';
 import { RecalculoService } from '../recalculo/recalculo.service';
+import { BitacoraService } from '../comun/bitacora/bitacora.service';
 import { obtenerProyectoAbierto } from '../proyectos/proyecto-abierto';
 import {
   esXlsx,
@@ -72,6 +73,7 @@ export class ImportacionesService {
     private readonly prisma: PrismaService,
     private readonly recalculo: RecalculoService,
     private readonly reloj: Reloj,
+    private readonly bitacora: BitacoraService,
   ) {}
 
   async obtenerPlantilla(): Promise<Buffer> {
@@ -850,15 +852,23 @@ export class ImportacionesService {
           descripcion: 'Importación de proyecto',
         });
 
+        const conteos = {
+          tareas: mapaCodigoAId.size,
+          dependencias: dependenciasFilas.length,
+          asignaciones: asignacionesData.length,
+          hitos: hitosData.length,
+          solicitudes: conteoSolicitudesCreadas,
+        };
+
+        await this.bitacora.registrarImportacion(
+          tx,
+          { proyectoId: idDestino!, rol: rol ?? 'JP' },
+          conteos,
+        );
+
         return {
           proyectoId: idDestino!,
-          conteos: {
-            tareas: mapaCodigoAId.size,
-            dependencias: dependenciasFilas.length,
-            asignaciones: asignacionesData.length,
-            hitos: hitosData.length,
-            solicitudes: conteoSolicitudesCreadas,
-          },
+          conteos,
         };
       },
       { timeout: 30000 },

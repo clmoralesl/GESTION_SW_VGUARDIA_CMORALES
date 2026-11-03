@@ -30,6 +30,7 @@ import {
   useImpactosCambio,
   useSolicitudCambio,
 } from '../api/cambios';
+import { HistorialSolicitudPanel } from '../bitacora/historial-paginado';
 import { AccionesDecisionCambio } from '../cambios/acciones-decision-cambio';
 import { FormularioSolicitud } from '../cambios/formulario-solicitud';
 import { LineaTiempoEtapas } from '../cambios/linea-tiempo-etapas';
@@ -270,6 +271,7 @@ export function PaginaDetalleCambio() {
           <Tabs.List mb="md">
             <Tabs.Tab value="etapas">Etapas del cambio (10)</Tabs.Tab>
             <Tabs.Tab value="impactos">Impactos y Aprobación ({impactos?.length ?? 0})</Tabs.Tab>
+            <Tabs.Tab value="historial">Historial</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="etapas">
@@ -297,6 +299,10 @@ export function PaginaDetalleCambio() {
                 }
               />
             </Stack>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="historial">
+            <HistorialSolicitudPanel solicitudId={solicitud.id} />
           </Tabs.Panel>
         </Tabs>
       </Stack>

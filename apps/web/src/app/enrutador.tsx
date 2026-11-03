@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { EstructuraApp } from '../diseno/estructura-app';
+import { PaginaBitacora } from '../paginas/pagina-bitacora';
 import { PaginaCalendario } from '../paginas/pagina-calendario';
 import { PaginaCambios } from '../paginas/pagina-cambios';
 import { PaginaDetalleCambio } from '../paginas/pagina-detalle-cambio';
@@ -41,6 +42,8 @@ const rutasModulos = MODULOS.map((m) => ({
       <PaginaTableroCambio />
     ) : m.ruta === 'importar-exportar' ? (
       <PaginaImportarExportar />
+    ) : m.ruta === 'bitacora' ? (
+      <PaginaBitacora />
     ) : (
       <PaginaProximamente titulo={m.titulo} />
     ),
@@ -58,6 +61,10 @@ export const enrutador = createBrowserRouter([
       ...rutasModulos,
       {
         path: 'cambios/:solicitudId',
+        element: <PaginaDetalleCambio />,
+      },
+      {
+        path: 'solicitudes-cambio/:solicitudId',
         element: <PaginaDetalleCambio />,
       },
       {

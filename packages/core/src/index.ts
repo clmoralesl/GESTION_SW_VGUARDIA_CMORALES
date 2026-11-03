@@ -38,3 +38,4 @@ export * from './evidencias';
 export * from './curvaS';
 export * from './tablero';
 export * from './tableroCambio';
+export * from './bitacora';

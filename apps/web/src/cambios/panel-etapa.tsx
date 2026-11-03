@@ -17,6 +17,7 @@ import {
   TextInput,
   Textarea,
 } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import {
@@ -49,6 +50,7 @@ import {
   type DetalleEtapaCambio,
   type DetalleSolicitudCambio,
 } from '../api/cambios';
+import { BotonProtegido } from '../componentes/boton-protegido';
 import { usePermisos } from '../sesion/use-permisos';
 
 interface PanelEtapaProps {
@@ -69,6 +71,21 @@ const etiquetaEstado: Record<EstadoEtapa, string> = {
   COMPLETADA: 'Completada',
   OMITIDA: 'Omitida',
 };
+
+function aFecha(valor: string | null | undefined): Date | null {
+  return valor ? new Date(`${valor.slice(0, 10)}T00:00:00`) : null;
+}
+
+function aFechaIso(valor: unknown): string | null {
+  if (!valor) return null;
+  if (valor instanceof Date) {
+    const mes = String(valor.getMonth() + 1).padStart(2, '0');
+    const dia = String(valor.getDate()).padStart(2, '0');
+    return `${valor.getFullYear()}-${mes}-${dia}`;
+  }
+  if (typeof valor === 'string') return valor.slice(0, 10);
+  return null;
+}
 
 function formatearTamano(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -125,10 +142,9 @@ export function PanelEtapa({ solicitud, etapa }: PanelEtapaProps) {
   });
 
   const esObligatoria = (ETAPAS_OBLIGATORIAS as readonly number[]).includes(etapa.numero);
-  const puedeIniciar = puedeAvanzar && !esTerminalSolicitud && etapa.estado === 'PENDIENTE';
-  const puedeCompletar = puedeAvanzar && !esTerminalSolicitud && etapa.estado === 'EN_CURSO';
-  const puedeOmitir =
-    puedeAvanzar &&
+  const admiteIniciar = !esTerminalSolicitud && etapa.estado === 'PENDIENTE';
+  const admiteCompletar = !esTerminalSolicitud && etapa.estado === 'EN_CURSO';
+  const admiteOmitir =
     !esTerminalSolicitud &&
     !esObligatoria &&
     etapa.estado !== 'COMPLETADA' &&
@@ -214,8 +230,9 @@ export function PanelEtapa({ solicitud, etapa }: PanelEtapaProps) {
           </div>
 
           <Group gap="xs">
-            {puedeIniciar && (
-              <Button
+            {admiteIniciar && (
+              <BotonProtegido
+                permiso="avanzarEtapasCambio"
                 leftSection={<IconPlayerPlay size={16} />}
                 color="blue"
                 size="sm"
@@ -223,10 +240,11 @@ export function PanelEtapa({ solicitud, etapa }: PanelEtapaProps) {
                 onClick={() => iniciarMutacion.mutate(etapa.numero)}
               >
                 Iniciar etapa
-              </Button>
+              </BotonProtegido>
             )}
-            {puedeCompletar && (
-              <Button
+            {admiteCompletar && (
+              <BotonProtegido
+                permiso="avanzarEtapasCambio"
                 leftSection={<IconCheck size={16} />}
                 color="green"
                 size="sm"
@@ -234,10 +252,11 @@ export function PanelEtapa({ solicitud, etapa }: PanelEtapaProps) {
                 onClick={() => completarMutacion.mutate(etapa.numero)}
               >
                 Completar etapa
-              </Button>
+              </BotonProtegido>
             )}
-            {puedeOmitir && (
-              <Button
+            {admiteOmitir && (
+              <BotonProtegido
+                permiso="avanzarEtapasCambio"
                 leftSection={<IconX size={16} />}
                 color="orange"
                 variant="light"
@@ -245,17 +264,18 @@ export function PanelEtapa({ solicitud, etapa }: PanelEtapaProps) {
                 onClick={() => setModalOmitir(true)}
               >
                 Omitir etapa
-              </Button>
+              </BotonProtegido>
             )}
-            {puedeAvanzar && !esTerminalSolicitud && (
-              <Button
+            {!esTerminalSolicitud && (
+              <BotonProtegido
+                permiso="avanzarEtapasCambio"
                 leftSection={<IconEdit size={16} />}
                 variant="default"
                 size="sm"
                 onClick={() => setModalEditarEtapa(true)}
               >
                 Editar etapa
-              </Button>
+              </BotonProtegido>
             )}
           </Group>
         </Group>
@@ -418,14 +438,15 @@ export function PanelEtapa({ solicitud, etapa }: PanelEtapaProps) {
                     Todas las acciones deben estar cerradas para completar la etapa 9
                   </Text>
                 </div>
-                {puedeAvanzar && !esTerminalSolicitud && etapa.estado === 'EN_CURSO' && (
-                  <Button
+                {!esTerminalSolicitud && etapa.estado === 'EN_CURSO' && (
+                  <BotonProtegido
+                    permiso="avanzarEtapasCambio"
                     size="xs"
                     leftSection={<IconPlus size={14} />}
                     onClick={() => setModalNuevaAccion(true)}
                   >
                     Nueva acción correctiva
-                  </Button>
+                  </BotonProtegido>
                 )}
               </Group>
 
@@ -537,17 +558,26 @@ export function PanelEtapa({ solicitud, etapa }: PanelEtapaProps) {
               />
               <Grid gutter="xs">
                 <Grid.Col span={6}>
-                  <TextInput
-                    label="Fecha inicio plan (AAAA-MM-DD)"
-                    placeholder="2026-11-01"
-                    {...formEditarEtapa.getInputProps('fechaInicio')}
+                  <DateInput
+                    label="Fecha inicio plan"
+                    placeholder="DD-MM-AAAA"
+                    valueFormat="DD-MM-YYYY"
+                    clearable
+                    value={aFecha(formEditarEtapa.values.fechaInicio)}
+                    onChange={(val) => formEditarEtapa.setFieldValue('fechaInicio', aFechaIso(val))}
+                    error={formEditarEtapa.errors.fechaInicio}
                   />
                 </Grid.Col>
                 <Grid.Col span={6}>
-                  <TextInput
-                    label="Fecha fin plan (AAAA-MM-DD)"
-                    placeholder="2026-11-15"
-                    {...formEditarEtapa.getInputProps('fechaFin')}
+                  <DateInput
+                    label="Fecha fin plan"
+                    placeholder="DD-MM-AAAA"
+                    valueFormat="DD-MM-YYYY"
+                    clearable
+                    minDate={aFecha(formEditarEtapa.values.fechaInicio) ?? undefined}
+                    value={aFecha(formEditarEtapa.values.fechaFin)}
+                    onChange={(val) => formEditarEtapa.setFieldValue('fechaFin', aFechaIso(val))}
+                    error={formEditarEtapa.errors.fechaFin}
                   />
                 </Grid.Col>
               </Grid>
@@ -603,11 +633,16 @@ export function PanelEtapa({ solicitud, etapa }: PanelEtapaProps) {
                 required
                 {...formAccion.getInputProps('responsable')}
               />
-              <TextInput
-                label="Fecha de compromiso (AAAA-MM-DD)"
-                placeholder="2026-11-20"
+              <DateInput
+                label="Fecha de compromiso"
+                placeholder="DD-MM-AAAA"
+                valueFormat="DD-MM-YYYY"
                 required
-                {...formAccion.getInputProps('fechaCompromiso')}
+                value={aFecha(formAccion.values.fechaCompromiso)}
+                onChange={(val) =>
+                  formAccion.setFieldValue('fechaCompromiso', aFechaIso(val) ?? '')
+                }
+                error={formAccion.errors.fechaCompromiso}
               />
               <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={() => setModalNuevaAccion(false)}>

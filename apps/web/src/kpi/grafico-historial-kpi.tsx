@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Alert, Badge, Box, Card, Center, Group, Loader, Modal, Stack, Text } from '@mantine/core';
 import { IconChartLine, IconInfoCircle } from '@tabler/icons-react';
 import * as echarts from 'echarts/core';
@@ -32,10 +32,104 @@ echarts.use([
   CanvasRenderer,
 ]);
 
+const COLOR_SERIE = '#1c7ed6';
+const COLOR_META = '#0d6efd';
+const COLOR_UMBRAL_VERDE = '#28a745';
+const COLOR_UMBRAL_AMARILLO = '#ffc107';
+
+type KpiGrafico = KpiProyectoResumen | KpiDetalleRespuesta | FilaKpiTabla;
+
+function MuestraLinea({ color, estilo }: { color: string; estilo: 'solid' | 'dashed' | 'dotted' }) {
+  return (
+    <Box
+      component="span"
+      style={{ display: 'inline-block', width: 28, borderTop: `3px ${estilo} ${color}` }}
+    />
+  );
+}
+
+function MuestraZona({ color }: { color: string }) {
+  return (
+    <Box
+      component="span"
+      style={{
+        display: 'inline-block',
+        width: 16,
+        height: 12,
+        background: color,
+        border: '1px solid rgba(0, 0, 0, 0.15)',
+      }}
+    />
+  );
+}
+
+function LeyendaHistorialKpi({ kpi }: { kpi: KpiGrafico }) {
+  const verde = kpi.umbrales?.verde ?? null;
+  const amarillo = kpi.umbrales?.amarillo ?? null;
+  const elementos: Array<{ clave: string; muestra: ReactNode; texto: string }> = [
+    {
+      clave: 'serie',
+      muestra: <MuestraLinea color={COLOR_SERIE} estilo="solid" />,
+      texto: 'Valor medido',
+    },
+  ];
+  if (kpi.meta !== null) {
+    elementos.push({
+      clave: 'meta',
+      muestra: <MuestraLinea color={COLOR_META} estilo="dashed" />,
+      texto: `Meta (${formatearValorKpi(kpi.meta, kpi.unidad)})`,
+    });
+  }
+  if (verde !== null) {
+    elementos.push({
+      clave: 'umbral-verde',
+      muestra: <MuestraLinea color={COLOR_UMBRAL_VERDE} estilo="dotted" />,
+      texto: `Umbral verde (${formatearValorKpi(verde, kpi.unidad)})`,
+    });
+  }
+  if (amarillo !== null) {
+    elementos.push({
+      clave: 'umbral-amarillo',
+      muestra: <MuestraLinea color={COLOR_UMBRAL_AMARILLO} estilo="dotted" />,
+      texto: `Umbral amarillo (${formatearValorKpi(amarillo, kpi.unidad)})`,
+    });
+  }
+  if (verde !== null && amarillo !== null) {
+    elementos.push(
+      {
+        clave: 'zona-verde',
+        muestra: <MuestraZona color="rgba(40, 167, 69, 0.25)" />,
+        texto: 'Zona verde',
+      },
+      {
+        clave: 'zona-amarilla',
+        muestra: <MuestraZona color="rgba(255, 193, 7, 0.25)" />,
+        texto: 'Zona amarilla',
+      },
+      {
+        clave: 'zona-roja',
+        muestra: <MuestraZona color="rgba(220, 53, 69, 0.25)" />,
+        texto: 'Zona roja',
+      },
+    );
+  }
+
+  return (
+    <Group gap="md" justify="center" wrap="wrap" mt="xs" aria-label="Leyenda del gráfico">
+      {elementos.map((e) => (
+        <Group key={e.clave} gap={6} wrap="nowrap">
+          {e.muestra}
+          <Text size="xs">{e.texto}</Text>
+        </Group>
+      ))}
+    </Group>
+  );
+}
+
 interface GraficoHistorialKpiProps {
   abierto: boolean;
   alCerrar: () => void;
-  kpi: KpiProyectoResumen | KpiDetalleRespuesta | FilaKpiTabla | null;
+  kpi: KpiGrafico | null;
   proyectoId: number | null;
   nombreProyecto?: string;
 }
@@ -47,7 +141,7 @@ export function GraficoHistorialKpi({
   proyectoId,
   nombreProyecto,
 }: GraficoHistorialKpiProps) {
-  const contenedorRef = useRef<HTMLDivElement>(null);
+  const [contenedor, setContenedor] = useState<HTMLDivElement | null>(null);
   const instanciaRef = useRef<echarts.ECharts | null>(null);
 
   const { data: mediciones, isLoading } = useMedicionesKpi(
@@ -64,12 +158,21 @@ export function GraficoHistorialKpi({
   }, [mediciones]);
 
   useEffect(() => {
-    if (!abierto || !contenedorRef.current || !kpi || isLoading) return;
+    if (!contenedor) return;
+    const instancia = echarts.init(contenedor);
+    instanciaRef.current = instancia;
+    const alRedimensionar = () => instancia.resize();
+    window.addEventListener('resize', alRedimensionar);
+    return () => {
+      window.removeEventListener('resize', alRedimensionar);
+      instancia.dispose();
+      instanciaRef.current = null;
+    };
+  }, [contenedor]);
 
-    if (!instanciaRef.current) {
-      instanciaRef.current = echarts.init(contenedorRef.current);
-    }
+  useEffect(() => {
     const chart = instanciaRef.current;
+    if (!contenedor || !chart || !kpi) return;
 
     const umbralVerde = kpi.umbrales?.verde ?? null;
     const umbralAmarillo = kpi.umbrales?.amarillo ?? null;
@@ -149,21 +252,21 @@ export function GraficoHistorialKpi({
       markLines.push({
         name: 'Meta',
         yAxis: meta,
-        lineStyle: { color: '#0d6efd', type: 'dashed', width: 2 },
+        lineStyle: { color: COLOR_META, type: 'dashed', width: 2 },
       });
     }
     if (umbralVerde !== null) {
       markLines.push({
-        name: 'Umbral Verde',
+        name: 'Umbral verde',
         yAxis: umbralVerde,
-        lineStyle: { color: '#28a745', type: 'dotted' },
+        lineStyle: { color: COLOR_UMBRAL_VERDE, type: 'dotted' },
       });
     }
     if (umbralAmarillo !== null) {
       markLines.push({
-        name: 'Umbral Amarillo',
+        name: 'Umbral amarillo',
         yAxis: umbralAmarillo,
-        lineStyle: { color: '#ffc107', type: 'dotted' },
+        lineStyle: { color: COLOR_UMBRAL_AMARILLO, type: 'dotted' },
       });
     }
 
@@ -216,35 +319,29 @@ export function GraficoHistorialKpi({
           symbolSize: 6,
           lineStyle: {
             width: 2.5,
-            color: '#1c7ed6',
+            color: COLOR_SERIE,
           },
           itemStyle: {
-            color: '#1c7ed6',
+            color: COLOR_SERIE,
           },
-          markLine: markLines.length > 0 ? { data: markLines } : undefined,
+          markLine:
+            markLines.length > 0
+              ? {
+                  symbol: 'none',
+                  label: {
+                    position: 'insideEndTop',
+                    formatter: (p: { name: string }) => p.name,
+                  },
+                  data: markLines,
+                }
+              : undefined,
           markArea: areas.length > 0 ? { data: areas } : undefined,
         },
       ],
     };
 
     chart.setOption(opciones, true);
-
-    const alRedimensionar = () => chart.resize();
-    window.addEventListener('resize', alRedimensionar);
-
-    return () => {
-      window.removeEventListener('resize', alRedimensionar);
-    };
-  }, [abierto, kpi, datosGrafico, isLoading]);
-
-  useEffect(() => {
-    return () => {
-      if (instanciaRef.current) {
-        instanciaRef.current.dispose();
-        instanciaRef.current = null;
-      }
-    };
-  }, [abierto]);
+  }, [contenedor, kpi, datosGrafico]);
 
   if (!kpi) return null;
 
@@ -303,7 +400,8 @@ export function GraficoHistorialKpi({
           </Alert>
         ) : (
           <Card withBorder p="xs">
-            <Box ref={contenedorRef} style={{ width: '100%', height: 360 }} />
+            <Box ref={setContenedor} style={{ width: '100%', height: 360 }} />
+            <LeyendaHistorialKpi kpi={kpi} />
           </Card>
         )}
       </Stack>

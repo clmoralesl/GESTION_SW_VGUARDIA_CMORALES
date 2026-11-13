@@ -19,18 +19,18 @@ test.describe('Demostración del caso de prueba mínimo', () => {
       timeout: 30_000,
     });
 
-    const barra121Inicial = page.getByTestId('barra-tarea-1.2.1');
-    await expect(barra121Inicial).toBeVisible({ timeout: 30_000 });
-    await expect(barra121Inicial).toHaveAttribute(
+    const barra133Inicial = page.getByTestId('barra-tarea-1.3.3');
+    await expect(barra133Inicial).toBeVisible({ timeout: 30_000 });
+    await expect(barra133Inicial).toHaveAttribute(
       'aria-label',
-      '1.2.1 Modelo de datos de vehículos y órdenes, del 09-11-2026 al 13-11-2026, avance 0%, crítica',
+      '1.3.3 Diseñar y validar prototipos UX/UI, del 19-11-2026 al 17-12-2026, avance 0%, crítica',
     );
 
     const barra211Inicial = page.getByTestId('barra-tarea-2.1.1');
     await expect(barra211Inicial).toBeVisible({ timeout: 30_000 });
     await expect(barra211Inicial).toHaveAttribute(
       'aria-label',
-      '2.1.1 Registro de vehículos y clientes, del 16-11-2026 al 23-11-2026, avance 0%, crítica',
+      '2.1.1 Construir agenda centralizada y asignación por carga y especialidad, del 18-12-2026 al 25-01-2027, avance 0%, crítica',
     );
 
     const barrasIniciales = page.locator(
@@ -43,26 +43,26 @@ test.describe('Demostración del caso de prueba mínimo', () => {
       timeout: 30_000,
     });
     const tarjetaSpiInicial = page.getByTestId('tarjeta-spi');
-    await expect(tarjetaSpiInicial.getByTestId('valor-tarjeta')).toHaveText('0.2906');
+    await expect(tarjetaSpiInicial.getByTestId('valor-tarjeta')).toHaveText('0.8756');
     const tarjetaCostoInicial = page.getByTestId('tarjeta-costo');
-    await expect(tarjetaCostoInicial.getByTestId('valor-tarjeta')).toContainText('$275.000');
+    await expect(tarjetaCostoInicial.getByTestId('valor-tarjeta')).toContainText('$6.520.200');
 
     const respCostosInicial = await page.request.get('http://localhost:3000/proyectos/1/costos', {
       headers: { 'X-Rol': 'JP' },
     });
     const datosCostosInicial = await respCostosInicial.json();
-    expect(datosCostosInicial.costoPlan).toBe(1071700);
+    expect(datosCostosInicial.costoPlan).toBe(102058680);
 
     await page.goto('/tareas');
     await expect(page.getByRole('heading', { name: /Tareas:/ })).toBeVisible();
 
-    const fila121 = page.locator('tr').filter({ hasText: '1.2.1' });
-    await expect(fila121).toBeVisible();
-    await fila121.getByRole('button', { name: 'Editar' }).click();
+    const fila133 = page.locator('tr').filter({ hasText: '1.3.3' });
+    await expect(fila133).toBeVisible();
+    await fila133.getByRole('button', { name: 'Editar' }).click();
 
     const inputDuracion = page.getByLabel('Duración (días hábiles)');
     await expect(inputDuracion).toBeVisible();
-    await inputDuracion.fill('7');
+    await inputDuracion.fill('23');
 
     await page.getByRole('button', { name: 'Guardar cambios' }).click();
     await expect(page.getByRole('dialog', { name: /Editar tarea/ })).not.toBeVisible();
@@ -70,18 +70,18 @@ test.describe('Demostración del caso de prueba mínimo', () => {
     await page.goto('/gantt');
     await expect(page.getByRole('heading', { name: 'Carta Gantt' })).toBeVisible();
 
-    const barra121Actualizada = page.getByTestId('barra-tarea-1.2.1');
-    await expect(barra121Actualizada).toBeVisible({ timeout: 30_000 });
-    await expect(barra121Actualizada).toHaveAttribute(
+    const barra133Actualizada = page.getByTestId('barra-tarea-1.3.3');
+    await expect(barra133Actualizada).toBeVisible({ timeout: 30_000 });
+    await expect(barra133Actualizada).toHaveAttribute(
       'aria-label',
-      '1.2.1 Modelo de datos de vehículos y órdenes, del 09-11-2026 al 17-11-2026, avance 0%, crítica',
+      '1.3.3 Diseñar y validar prototipos UX/UI, del 19-11-2026 al 22-12-2026, avance 0%, crítica',
     );
 
     const barra211Actualizada = page.getByTestId('barra-tarea-2.1.1');
     await expect(barra211Actualizada).toBeVisible({ timeout: 30_000 });
     await expect(barra211Actualizada).toHaveAttribute(
       'aria-label',
-      '2.1.1 Registro de vehículos y clientes, del 18-11-2026 al 25-11-2026, avance 0%, crítica',
+      '2.1.1 Construir agenda centralizada y asignación por carga y especialidad, del 23-12-2026 al 28-01-2027, avance 0%, crítica',
     );
 
     await page.goto('/tablero-proyecto');
@@ -90,13 +90,13 @@ test.describe('Demostración del caso de prueba mínimo', () => {
     });
 
     const tarjetaAvance = page.getByTestId('tarjeta-avance');
-    await expect(tarjetaAvance.getByTestId('valor-tarjeta')).toHaveText('7.12%');
+    await expect(tarjetaAvance.getByTestId('valor-tarjeta')).toHaveText('9.82%');
 
     const tarjetaSpi = page.getByTestId('tarjeta-spi');
-    await expect(tarjetaSpi.getByTestId('valor-tarjeta')).toHaveText('0.2852');
+    await expect(tarjetaSpi.getByTestId('valor-tarjeta')).toHaveText('0.8756');
 
     const tarjetaCosto = page.getByTestId('tarjeta-costo');
-    await expect(tarjetaCosto.getByTestId('valor-tarjeta')).toContainText('$275.000');
+    await expect(tarjetaCosto.getByTestId('valor-tarjeta')).toContainText('$6.520.200');
 
     const respCostosActualizado = await page.request.get(
       'http://localhost:3000/proyectos/1/costos',
@@ -105,10 +105,12 @@ test.describe('Demostración del caso de prueba mínimo', () => {
       },
     );
     const datosCostosActualizado = await respCostosActualizado.json();
-    expect(datosCostosActualizado.costoPlan).toBe(1170700);
+    expect(datosCostosActualizado.costoPlan).toBe(102416280);
   });
 
-  test('escenario 2: ajuste de asignación elimina alerta de sobreasignación', async ({ page }) => {
+  test('escenario 2: aumento de dedicación genera alerta de sobreasignación y mayor costo', async ({
+    page,
+  }) => {
     await fijarSesion(page, 'JP');
 
     await page.goto('/tablero-proyecto');
@@ -116,72 +118,35 @@ test.describe('Demostración del caso de prueba mínimo', () => {
       timeout: 30_000,
     });
 
-    await expect(
-      page.getByText(/Sobreasignación de Valentina Muñoz entre el 12-11-2026 y el 13-11-2026/),
-    ).toBeVisible();
+    await expect(page.getByText(/Sobreasignación de Valeska Guardia/)).not.toBeVisible();
 
     const tarjetaCpiInicial = page.getByTestId('tarjeta-cpi');
-    await expect(tarjetaCpiInicial.getByTestId('valor-tarjeta')).toHaveText('0.8');
-
-    const tarjetaCostoInicial = page.getByTestId('tarjeta-costo');
-    await expect(tarjetaCostoInicial.getByTestId('valor-tarjeta')).toContainText('$275.000');
+    await expect(tarjetaCpiInicial.getByTestId('valor-tarjeta')).toHaveText('0.9521');
 
     const respCostos2Ini = await page.request.get('http://localhost:3000/proyectos/1/costos', {
       headers: { 'X-Rol': 'JP' },
     });
-    expect((await respCostos2Ini.json()).costoPlan).toBe(1071700);
-
-    await page.goto('/recursos?pestana=carga');
-    await expect(page.getByRole('heading', { name: 'Recursos' })).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(page.getByRole('heading', { name: 'Distribución semanal de carga' })).toBeVisible({
-      timeout: 30_000,
-    });
-
-    const panelCargaInicial = page
-      .getByRole('tabpanel')
-      .filter({ hasText: 'Distribución semanal de carga' });
-    const filaValentinaInicial = panelCargaInicial
-      .locator('tr')
-      .filter({ hasText: 'Valentina Muñoz' });
-    await expect(filaValentinaInicial).toBeVisible();
-    await expect(filaValentinaInicial).toContainText('84%');
+    expect((await respCostos2Ini.json()).costoPlan).toBe(102058680);
 
     await page.goto('/tareas');
     await expect(page.getByRole('heading', { name: /Tareas:/ })).toBeVisible();
 
-    const fila121 = page.locator('tr').filter({ hasText: '1.2.1' });
-    await expect(fila121).toBeVisible();
-    await fila121.getByRole('button', { name: 'Detalle' }).click();
+    const fila212 = page.locator('tr').filter({ hasText: '2.1.2' });
+    await expect(fila212).toBeVisible();
+    await fila212.getByRole('button', { name: 'Detalle' }).click();
 
     const botonEditarAsignacion = page.getByRole('button', {
-      name: 'Editar asignación de Valentina Muñoz',
+      name: 'Editar asignación de Valeska Guardia',
     });
     await expect(botonEditarAsignacion).toBeVisible();
     await botonEditarAsignacion.click();
 
     const inputDedicacion = page.getByLabel('Dedicación (%)');
     await expect(inputDedicacion).toBeVisible();
-    await inputDedicacion.fill('40');
-
-    const inputHorasReales = page.getByLabel('Horas reales');
-    await expect(inputHorasReales).toBeVisible();
-    await inputHorasReales.fill('15');
+    await inputDedicacion.fill('80');
 
     await page.getByRole('button', { name: 'Guardar cambios' }).click();
     await expect(page.getByRole('dialog', { name: 'Editar asignación' })).not.toBeVisible();
-
-    await page.goto('/recursos?pestana=carga');
-    await expect(page.getByRole('heading', { name: 'Distribución semanal de carga' })).toBeVisible({
-      timeout: 30_000,
-    });
-
-    const panelCargaFinal = page
-      .getByRole('tabpanel')
-      .filter({ hasText: 'Distribución semanal de carga' });
-    const filaValentinaFinal = panelCargaFinal.locator('tr').filter({ hasText: 'Valentina Muñoz' });
-    await expect(filaValentinaFinal).toContainText('64%');
 
     await page.goto('/tablero-proyecto');
     await expect(page.getByRole('heading', { name: 'Tablero de comando' })).toBeVisible({
@@ -189,19 +154,13 @@ test.describe('Demostración del caso de prueba mínimo', () => {
     });
 
     await expect(
-      page.getByText(/Sobreasignación de Valentina Muñoz entre el 12-11-2026 y el 13-11-2026/),
-    ).not.toBeVisible();
-
-    const tarjetaCpiFinal = page.getByTestId('tarjeta-cpi');
-    await expect(tarjetaCpiFinal.getByTestId('valor-tarjeta')).toHaveText('0.5714');
-
-    const tarjetaCostoFinal = page.getByTestId('tarjeta-costo');
-    await expect(tarjetaCostoFinal.getByTestId('valor-tarjeta')).toContainText('$385.000');
+      page.getByText(/Sobreasignación de Valeska Guardia entre el 18-12-2026 y el 25-01-2027/),
+    ).toBeVisible({ timeout: 30_000 });
 
     const respCostos2Fin = await page.request.get('http://localhost:3000/proyectos/1/costos', {
       headers: { 'X-Rol': 'JP' },
     });
-    expect((await respCostos2Fin.json()).costoPlan).toBe(989200);
+    expect((await respCostos2Fin.json()).costoPlan).toBe(103298680);
   });
 
   test('escenario 3: aprobación de solicitud SC-002 por CC genera nueva versión de línea base', async ({
@@ -214,17 +173,17 @@ test.describe('Demostración del caso de prueba mínimo', () => {
       timeout: 30_000,
     });
     const tarjetaSpi3Ini = page.getByTestId('tarjeta-spi');
-    await expect(tarjetaSpi3Ini.getByTestId('valor-tarjeta')).toHaveText('0.2906');
+    await expect(tarjetaSpi3Ini.getByTestId('valor-tarjeta')).toHaveText('0.8756');
     const tarjetaCpi3Ini = page.getByTestId('tarjeta-cpi');
-    await expect(tarjetaCpi3Ini.getByTestId('valor-tarjeta')).toHaveText('0.8');
+    await expect(tarjetaCpi3Ini.getByTestId('valor-tarjeta')).toHaveText('0.9521');
     const tarjetaCosto3Ini = page.getByTestId('tarjeta-costo');
-    await expect(tarjetaCosto3Ini.getByTestId('valor-tarjeta')).toContainText('$275.000');
-    await expect(tarjetaCosto3Ini).toContainText('$45.000.000');
+    await expect(tarjetaCosto3Ini.getByTestId('valor-tarjeta')).toContainText('$6.520.200');
+    await expect(tarjetaCosto3Ini).toContainText('$123.408.680');
 
     const respCostos3Ini = await page.request.get('http://localhost:3000/proyectos/1/costos', {
       headers: { 'X-Rol': 'JP' },
     });
-    expect((await respCostos3Ini.json()).costoPlan).toBe(1071700);
+    expect((await respCostos3Ini.json()).costoPlan).toBe(102058680);
 
     await page.goto('/tablero-cambio');
     await expect(page.getByRole('heading', { name: 'Tablero de gestión del cambio' })).toBeVisible({
@@ -282,24 +241,24 @@ test.describe('Demostración del caso de prueba mínimo', () => {
     );
     const datosVigente = await respVigente.json();
     expect(datosVigente.lineaBase.version).toBe(2);
-    expect(datosVigente.lineaBase.fechaFinProyecto).toBe('2027-01-15');
+    expect(datosVigente.lineaBase.fechaFinProyecto).toBe('2027-06-02');
 
     await page.goto('/tablero-proyecto');
     await expect(page.getByRole('heading', { name: 'Tablero de comando' })).toBeVisible({
       timeout: 30_000,
     });
     const tarjetaSpi3Fin = page.getByTestId('tarjeta-spi');
-    await expect(tarjetaSpi3Fin.getByTestId('valor-tarjeta')).toHaveText('0.2492');
+    await expect(tarjetaSpi3Fin.getByTestId('valor-tarjeta')).toHaveText('0.8756');
     const tarjetaCpi3Fin = page.getByTestId('tarjeta-cpi');
-    await expect(tarjetaCpi3Fin.getByTestId('valor-tarjeta')).toHaveText('0.8');
+    await expect(tarjetaCpi3Fin.getByTestId('valor-tarjeta')).toHaveText('0.9521');
     const tarjetaCosto3Fin = page.getByTestId('tarjeta-costo');
-    await expect(tarjetaCosto3Fin.getByTestId('valor-tarjeta')).toContainText('$275.000');
-    await expect(tarjetaCosto3Fin).toContainText('$48.000.000');
+    await expect(tarjetaCosto3Fin.getByTestId('valor-tarjeta')).toContainText('$6.520.200');
+    await expect(tarjetaCosto3Fin).toContainText('$125.408.680');
 
     const respCostos3Fin = await page.request.get('http://localhost:3000/proyectos/1/costos', {
       headers: { 'X-Rol': 'JP' },
     });
-    expect((await respCostos3Fin.json()).costoPlan).toBe(1373800);
+    expect((await respCostos3Fin.json()).costoPlan).toBe(103367120);
 
     await page.goto('/gantt');
     await expect(page.getByRole('heading', { name: 'Carta Gantt' })).toBeVisible({
@@ -320,7 +279,7 @@ test.describe('Demostración del caso de prueba mínimo', () => {
     await expect(barraLineaBase211).toBeVisible({ timeout: 30_000 });
     await expect(barraLineaBase211).toHaveAttribute(
       'aria-label',
-      'Línea base 2.1.1: del 19-11-2026 al 26-11-2026',
+      'Línea base 2.1.1: del 18-12-2026 al 25-01-2027',
     );
 
     await page.goto('/tablero-cambio');

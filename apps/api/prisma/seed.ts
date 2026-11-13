@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import {
   AmbitoKpi,
   CategoriaCambio,
@@ -10,6 +12,7 @@ import {
   Prioridad,
   Prisma,
   PrismaClient,
+  RolUsuario,
   Semaforo,
   TipoDependencia,
   UnidadKpi,
@@ -29,7 +32,6 @@ import {
   numerarArbol,
   planificarProyecto,
   sumarDiasCorridos,
-  sumarDiasHabiles,
   TIPOS_RECURSO,
   type CalendarioLaboral,
   type DependenciaCronograma,
@@ -49,15 +51,314 @@ import type { ContextoRecalculo } from '../src/recalculo/recalculo.tipos';
 
 const prisma = new PrismaClient();
 
+const NOMBRE_PROYECTO_PRINCIPAL = 'AutoFix Conecta · Piloto 3 sucursales';
+
 const PROYECTOS_SEMILLA = [
   {
-    nombre: 'AutoFix · Implementación',
-    descripcion: 'Implementación del sistema de gestión de órdenes de trabajo del taller.',
-    responsable: 'Jefe de Proyecto',
-    presupuesto: 45000000,
-    fechaInicio: new Date('2026-11-02T00:00:00.000Z'),
-    fechaFin: new Date('2027-03-31T00:00:00.000Z'),
+    nombre: NOMBRE_PROYECTO_PRINCIPAL,
+    descripcion:
+      'Plataforma unificada de agenda, órdenes de trabajo, presupuestos con aprobación trazable, repuestos por orden, historial y garantías, y seguimiento del vehículo con WhatsApp Business, en piloto en Santiago, Rancagua y Viña del Mar.',
+    responsable: 'Claudio Morales',
+    presupuesto: 123408680,
+    fechaInicio: new Date('2026-10-05T00:00:00.000Z'),
+    fechaFin: new Date('2027-05-28T00:00:00.000Z'),
     estado: EstadoProyecto.EN_CURSO,
+  },
+];
+
+const TAREAS_SEMILLA: {
+  codigo: string;
+  nombre: string;
+  responsable: string;
+  duracionDias: number;
+  descripcion: string;
+  inicioReal?: string;
+  finReal?: string;
+  porcentajeAvance?: number;
+}[] = [
+  {
+    codigo: '1',
+    nombre: 'Inicio, análisis y diseño',
+    responsable: 'Claudio Morales',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '1.1',
+    nombre: 'Inicio y planificación',
+    responsable: 'Claudio Morales',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '1.1.1',
+    nombre: 'Elaborar el plan de gestión del proyecto',
+    responsable: 'Claudio Morales',
+    duracionDias: 10,
+    descripcion: 'EDT, cronograma, costos, riesgos y comunicaciones.',
+    inicioReal: '2026-10-05',
+    finReal: '2026-10-20',
+    porcentajeAvance: 100,
+  },
+  {
+    codigo: '1.1.2',
+    nombre: 'Contratar la fábrica de software por hitos',
+    responsable: 'Claudio Morales',
+    duracionDias: 15,
+    descripcion: 'Bases, evaluación de ofertas y contrato por hitos.',
+    inicioReal: '2026-10-05',
+    finReal: '2026-10-26',
+    porcentajeAvance: 100,
+  },
+  {
+    codigo: '1.2',
+    nombre: 'Análisis de procesos y requisitos',
+    responsable: 'Valeska Guardia',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '1.2.1',
+    nombre: 'Levantar procesos actuales y diseñar procesos futuros',
+    responsable: 'Valeska Guardia',
+    duracionDias: 12,
+    descripcion:
+      'Levantamiento en las 3 sucursales piloto y procesos futuros en BPMN validados por Operaciones.',
+    inicioReal: '2026-10-27',
+    porcentajeAvance: 85,
+  },
+  {
+    codigo: '1.2.2',
+    nombre: 'Especificar backlog y reglas de negocio (repuestos, garantías y portal)',
+    responsable: 'Valeska Guardia',
+    duracionDias: 19,
+    descripcion:
+      'Historias de usuario priorizadas; reglas de repuestos por OT (origen y conciliación), de garantías (identificación, vigencia y verificación entre sucursales) y del portal con WhatsApp.',
+  },
+  {
+    codigo: '1.3',
+    nombre: 'Diseño de la solución',
+    responsable: 'Andrés Contreras',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '1.3.1',
+    nombre: 'Diseñar integraciones y arquitectura, y configurar ambientes cloud',
+    responsable: 'Andrés Contreras',
+    duracionDias: 24,
+    descripcion:
+      'Prueba de concepto de servicios del ERP y del inventario, especificación de interfaces, arquitectura escalable a 30 sucursales y ambientes de desarrollo, pruebas y producción.',
+    inicioReal: '2026-10-27',
+    porcentajeAvance: 60,
+  },
+  {
+    codigo: '1.3.2',
+    nombre: 'Diseñar el modelo de datos y la estrategia de migración',
+    responsable: 'Andrés Contreras',
+    duracionDias: 13,
+    descripcion:
+      'Ficha única, OT, presupuestos, repuestos y garantías; deduplicación por RUT y patente; 24 meses de 3 sucursales.',
+    inicioReal: '2026-11-12',
+    porcentajeAvance: 20,
+  },
+  {
+    codigo: '1.3.3',
+    nombre: 'Diseñar y validar prototipos UX/UI',
+    responsable: 'Javiera Rivas',
+    duracionDias: 20,
+    descripcion:
+      'Prototipos de módulos internos y del portal responsivo, validados con usuarios clave y Director Comercial.',
+  },
+  {
+    codigo: '2',
+    nombre: 'Construcción de la plataforma',
+    responsable: 'Andrés Contreras',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '2.1',
+    nombre: 'Agenda, ficha única y orden de trabajo',
+    responsable: 'Andrés Contreras',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '2.1.1',
+    nombre: 'Construir agenda centralizada y asignación por carga y especialidad',
+    responsable: 'Andrés Contreras',
+    duracionDias: 25,
+    descripcion:
+      'Capacidad por sucursal y especialidad, canales, inasistencias, alerta de reserva duplicada y asignación de mecánicos. Carril de desarrollo 1.',
+  },
+  {
+    codigo: '2.1.2',
+    nombre: 'Construir ficha única de cliente y vehículo y orden de trabajo digital',
+    responsable: 'Andrés Contreras',
+    duracionDias: 25,
+    descripcion:
+      'Identificación por RUT y patente sin duplicados y OT con formato único. Carril de desarrollo 2.',
+  },
+  {
+    codigo: '2.2',
+    nombre: 'Presupuestos, repuestos y garantías',
+    responsable: 'Andrés Contreras',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '2.2.1',
+    nombre: 'Construir presupuestos con aprobación trazable del cliente',
+    responsable: 'Andrés Contreras',
+    duracionDias: 15,
+    descripcion:
+      'Versión, fecha, hora y canal de aprobación; bloqueo de cierre si el monto difiere. Carril 2.',
+  },
+  {
+    codigo: '2.2.2',
+    nombre: 'Construir registro de repuestos por OT y conciliación con inventario',
+    responsable: 'Andrés Contreras',
+    duracionDias: 10,
+    descripcion:
+      'Repuestos consumidos y su origen (stock propio, otra sucursal, bodega central o compra urgente), conciliados con el consumo en inventario. Carril 3; la dependencia con 2.2.3 es de recurso.',
+  },
+  {
+    codigo: '2.2.3',
+    nombre: 'Construir historial y verificación de garantías entre sucursales',
+    responsable: 'Andrés Contreras',
+    duracionDias: 20,
+    descripcion:
+      'Historial multisucursal y garantías con vigencia por plazo y kilometraje. Carril 3.',
+  },
+  {
+    codigo: '2.3',
+    nombre: 'Portal de clientes, WhatsApp y tablero',
+    responsable: 'Andrés Contreras',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '2.3.1',
+    nombre: 'Construir portal responsivo y autoagendamiento',
+    responsable: 'Andrés Contreras',
+    duracionDias: 25,
+    descripcion:
+      'Estado del vehículo, aprobación de presupuestos y reserva web sobre la agenda real. Carril 1.',
+  },
+  {
+    codigo: '2.3.2',
+    nombre: 'Integrar notificaciones y enlaces por WhatsApp Business',
+    responsable: 'Andrés Contreras',
+    duracionDias: 10,
+    descripcion: 'Plantillas aprobadas, consentimiento y avisos por cambio de estado. Carril 3.',
+  },
+  {
+    codigo: '2.3.3',
+    nombre: 'Construir tablero gerencial consolidado',
+    responsable: 'Andrés Contreras',
+    duracionDias: 10,
+    descripcion:
+      'Horas disponibles y ocupadas, inasistencias, compras urgentes y tiempo promedio de reparación. Carril 2.',
+  },
+  {
+    codigo: '3',
+    nombre: 'Integración, migración y pruebas',
+    responsable: 'Andrés Contreras',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '3.1',
+    nombre: 'Integración con inventario y ERP',
+    responsable: 'Andrés Contreras',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '3.1.1',
+    nombre: 'Construir integración con el inventario',
+    responsable: 'Andrés Contreras',
+    duracionDias: 20,
+    descripcion: 'Consulta de stock y registro de consumo.',
+  },
+  {
+    codigo: '3.1.2',
+    nombre: 'Construir integración con el ERP para facturación',
+    responsable: 'Andrés Contreras',
+    duracionDias: 20,
+    descripcion:
+      'Envío de OT cerradas a facturación con los servicios del proveedor, sin modificar el ERP.',
+  },
+  {
+    codigo: '3.2',
+    nombre: 'Migrar los datos del piloto (24 meses, 3 sucursales)',
+    responsable: 'Valeska Guardia',
+    duracionDias: 46,
+    descripcion:
+      'Extracción, depuración y deduplicación, carga de prueba y validación por muestreo (98 % o más).',
+  },
+  {
+    codigo: '3.3',
+    nombre: 'Ejecutar pruebas integrales, de integración, rendimiento y seguridad',
+    responsable: 'Paula Navarro',
+    duracionDias: 15,
+    descripcion:
+      'Pruebas de extremo a extremo, con ERP, inventario y WhatsApp, y pruebas de rendimiento y seguridad (OWASP).',
+  },
+  {
+    codigo: '4',
+    nombre: 'Aceptación, implementación y cierre',
+    responsable: 'Claudio Morales',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '4.1',
+    nombre: 'Ejecutar UAT y decisión Go/No-Go',
+    responsable: 'Valeska Guardia',
+    duracionDias: 15,
+    descripcion:
+      'Preparación de casos y datos, UAT con usuarios clave de las 3 sucursales y acta Go/No-Go.',
+  },
+  {
+    codigo: '4.2',
+    nombre: 'Capacitación y puesta en marcha',
+    responsable: 'Claudio Morales',
+    duracionDias: 1,
+    descripcion: '',
+  },
+  {
+    codigo: '4.2.1',
+    nombre: 'Capacitar por turnos y gestionar el cambio',
+    responsable: 'Claudio Morales',
+    duracionDias: 30,
+    descripcion:
+      'Plan de gestión del cambio, manuales y cápsulas; capacitación por turnos en modalidad sombra, sin cerrar sucursales.',
+  },
+  {
+    codigo: '4.2.2',
+    nombre: 'Adquirir tabletas y revisar la red de las sucursales',
+    responsable: 'Claudio Morales',
+    duracionDias: 15,
+    descripcion:
+      'Compra justo a tiempo: debe terminar cuando comienza la puesta en marcha (dependencia SF).',
+  },
+  {
+    codigo: '4.2.3',
+    nombre: 'Ejecutar la carga final y la puesta en marcha escalonada',
+    responsable: 'Claudio Morales',
+    duracionDias: 13,
+    descripcion:
+      'Carga final en fin de semana y puesta en marcha en Rancagua, Viña del Mar y Santiago.',
+  },
+  {
+    codigo: '4.3',
+    nombre: 'Estabilizar, transferir y cerrar el proyecto',
+    responsable: 'Claudio Morales',
+    duracionDias: 19,
+    descripcion:
+      '4 semanas de soporte en sitio, transferencia a TI interna, informe de indicadores, plan de escalamiento, lecciones aprendidas y acta de cierre.',
   },
 ];
 
@@ -65,513 +366,34 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
   const conteo = await prisma.tarea.count({ where: { proyectoId } });
   if (conteo > 0) return;
 
-  const etapa1 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: null,
-      nivel: NivelTarea.ETAPA,
-      codigo: '~1',
-      orden: 1,
-      nombre: 'Levantamiento y diseño',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act11 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa1.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~1.1',
-      orden: 1,
-      nombre: 'Levantamiento de procesos del taller',
-      responsable: 'Jefe de Taller',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act11.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~1.1.1',
-      orden: 1,
-      nombre: 'Entrevistas con el jefe de taller',
-      responsable: 'Jefe de Taller',
-      duracionDias: 3,
-      inicioReal: fechaIsoADate('2026-11-02'),
-      finReal: fechaIsoADate('2026-11-04'),
-      porcentajeAvance: new Prisma.Decimal(100),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act11.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~1.1.2',
-      orden: 2,
-      nombre: 'Mapeo del flujo de órdenes de trabajo',
-      responsable: 'Jefe de Taller',
-      duracionDias: 4,
-      inicioReal: fechaIsoADate('2026-11-05'),
-      porcentajeAvance: new Prisma.Decimal(50),
-    },
-  });
-
-  const act12 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa1.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~1.2',
-      orden: 2,
-      nombre: 'Diseño de la solución',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act12.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~1.2.1',
-      orden: 1,
-      nombre: 'Modelo de datos de vehículos y órdenes',
-      responsable: 'Desarrollador',
-      duracionDias: 5,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act12.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~1.2.2',
-      orden: 2,
-      nombre: 'Prototipo de pantallas de recepción',
-      responsable: 'Diseñador UI',
-      duracionDias: 4,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act13 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa1.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~1.3',
-      orden: 3,
-      nombre: 'Arquitectura e infraestructura',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act13.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~1.3.1',
-      orden: 1,
-      nombre: 'Definición de arquitectura y servidores',
-      responsable: 'Desarrollador Senior',
-      duracionDias: 3,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const etapa2 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: null,
-      nivel: NivelTarea.ETAPA,
-      codigo: '~2',
-      orden: 2,
-      nombre: 'Construcción',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act21 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa2.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~2.1',
-      orden: 1,
-      nombre: 'Módulo de órdenes de trabajo',
-      responsable: 'Desarrollador Senior',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act21.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~2.1.1',
-      orden: 1,
-      nombre: 'Registro de vehículos y clientes',
-      responsable: 'Desarrollador',
-      duracionDias: 6,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act21.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~2.1.2',
-      orden: 2,
-      nombre: 'Ingreso y seguimiento de órdenes',
-      responsable: 'Desarrollador',
-      duracionDias: 8,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act22 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa2.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~2.2',
-      orden: 2,
-      nombre: 'Módulo de agenda de mecánicos',
-      responsable: 'Desarrollador',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act22.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~2.2.1',
-      orden: 1,
-      nombre: 'Calendario de turnos por mecánico',
-      responsable: 'Desarrollador',
-      duracionDias: 5,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act22.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~2.2.2',
-      orden: 2,
-      nombre: 'Configuración de impresoras de órdenes',
-      responsable: 'Técnico de soporte',
-      duracionDias: 2,
-      fechaFija: fechaIsoADate('2026-11-23'),
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act23 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa2.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~2.3',
-      orden: 3,
-      nombre: 'Módulo de inventario y repuestos',
-      responsable: 'Desarrollador',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act23.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~2.3.1',
-      orden: 1,
-      nombre: 'Control de stock de repuestos comunes',
-      responsable: 'Desarrollador',
-      duracionDias: 4,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const etapa3 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: null,
-      nivel: NivelTarea.ETAPA,
-      codigo: '~3',
-      orden: 3,
-      nombre: 'Pruebas e integración',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act31 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa3.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~3.1',
-      orden: 1,
-      nombre: 'Pruebas del sistema',
-      responsable: 'Desarrollador Senior',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act31.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~3.1.1',
-      orden: 1,
-      nombre: 'Pruebas unitarias y de integración de APIs',
-      responsable: 'Desarrollador',
-      duracionDias: 5,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act31.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~3.1.2',
-      orden: 2,
-      nombre: 'Pruebas de carga y concurrencia',
-      responsable: 'Desarrollador Senior',
-      duracionDias: 4,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act32 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa3.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~3.2',
-      orden: 2,
-      nombre: 'Capacitación del personal',
-      responsable: 'Jefe de Taller',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act32.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~3.2.1',
-      orden: 1,
-      nombre: 'Capacitación a jefes de taller y recepcionistas',
-      responsable: 'Jefe de Taller',
-      duracionDias: 3,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act32.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~3.2.2',
-      orden: 2,
-      nombre: 'Manuales de usuario y guías rápidas',
-      responsable: 'Diseñador UI',
-      duracionDias: 3,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act33 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa3.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~3.3',
-      orden: 3,
-      nombre: 'Validación con usuarios',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act33.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~3.3.1',
-      orden: 1,
-      nombre: 'Pruebas de aceptación con mecánicos',
-      responsable: 'Mecánica senior',
-      duracionDias: 4,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const etapa4 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: null,
-      nivel: NivelTarea.ETAPA,
-      codigo: '~4',
-      orden: 4,
-      nombre: 'Puesta en marcha y soporte',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act41 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa4.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~4.1',
-      orden: 1,
-      nombre: 'Despliegue a producción',
-      responsable: 'Desarrollador Senior',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act41.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~4.1.1',
-      orden: 1,
-      nombre: 'Configuración del entorno de producción',
-      responsable: 'Desarrollador Senior',
-      duracionDias: 3,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act41.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~4.1.2',
-      orden: 2,
-      nombre: 'Migración inicial de datos del taller',
-      responsable: 'Desarrollador',
-      duracionDias: 2,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act42 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa4.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~4.2',
-      orden: 2,
-      nombre: 'Marcha blanca',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act42.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~4.2.1',
-      orden: 1,
-      nombre: 'Operación en paralelo durante marcha blanca',
-      responsable: 'Jefe de Taller',
-      duracionDias: 5,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act42.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~4.2.2',
-      orden: 2,
-      nombre: 'Resolución de incidencias prioritarias',
-      responsable: 'Desarrollador Senior',
-      duracionDias: 4,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  const act43 = await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: etapa4.id,
-      nivel: NivelTarea.ACTIVIDAD,
-      codigo: '~4.3',
-      orden: 3,
-      nombre: 'Cierre y entrega',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 1,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
-
-  await prisma.tarea.create({
-    data: {
-      proyectoId,
-      padreId: act43.id,
-      nivel: NivelTarea.SUBACTIVIDAD,
-      codigo: '~4.3.1',
-      orden: 1,
-      nombre: 'Revisión final y firma de acta de entrega',
-      responsable: 'Jefe de Proyecto',
-      duracionDias: 2,
-      porcentajeAvance: new Prisma.Decimal(0),
-    },
-  });
+  const idsPorCodigo = new Map<string, number>();
+  for (const def of TAREAS_SEMILLA) {
+    const partes = def.codigo.split('.');
+    const codigoPadre = partes.length > 1 ? partes.slice(0, -1).join('.') : null;
+    const nivel =
+      partes.length === 1
+        ? NivelTarea.ETAPA
+        : partes.length === 2
+          ? NivelTarea.ACTIVIDAD
+          : NivelTarea.SUBACTIVIDAD;
+    const creada = await prisma.tarea.create({
+      data: {
+        proyectoId,
+        padreId: codigoPadre ? (idsPorCodigo.get(codigoPadre) ?? null) : null,
+        nivel,
+        codigo: `~${def.codigo}`,
+        orden: Number(partes[partes.length - 1]),
+        nombre: def.nombre,
+        descripcion: def.descripcion,
+        responsable: def.responsable,
+        duracionDias: def.duracionDias,
+        inicioReal: def.inicioReal ? fechaIsoADate(def.inicioReal) : null,
+        finReal: def.finReal ? fechaIsoADate(def.finReal) : null,
+        porcentajeAvance: new Prisma.Decimal(def.porcentajeAvance ?? 0),
+      },
+    });
+    idsPorCodigo.set(def.codigo, creada.id);
+  }
 
   const todas = await prisma.tarea.findMany({ where: { proyectoId } });
   const numeracion = numerarArbol(todas);
@@ -595,26 +417,43 @@ const DEPENDENCIAS_SEMILLA: {
   tipo: TipoDependencia;
   desfaseDias: number;
 }[] = [
-  { predecesora: '1.1.1', sucesora: '1.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '1.1.2', sucesora: '1.2.1', tipo: TipoDependencia.SS, desfaseDias: 2 },
-  { predecesora: '1.2.1', sucesora: '1.2.2', tipo: TipoDependencia.SS, desfaseDias: 3 },
-  { predecesora: '1.1.2', sucesora: '1.2.2', tipo: TipoDependencia.FF, desfaseDias: 5 },
-  { predecesora: '1.2.1', sucesora: '2.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '2.1.1', sucesora: '2.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '2.1.2', sucesora: '2.2.1', tipo: TipoDependencia.SS, desfaseDias: 7 },
-  { predecesora: '1.2.1', sucesora: '2.2.2', tipo: TipoDependencia.SF, desfaseDias: 0 },
-  { predecesora: '1.2.1', sucesora: '1.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.1.2', sucesora: '1.2.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.1.1', sucesora: '1.2.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.2.1', sucesora: '1.2.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.1.2', sucesora: '1.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.2.1', sucesora: '1.3.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.2.2', sucesora: '1.3.3', tipo: TipoDependencia.SS, desfaseDias: 5 },
+  { predecesora: '1.3.3', sucesora: '2.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.3.2', sucesora: '2.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.3.3', sucesora: '2.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.1.2', sucesora: '2.2.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.2.3', sucesora: '2.2.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.1.1', sucesora: '2.2.2', tipo: TipoDependencia.SS, desfaseDias: 10 },
+  { predecesora: '2.1.2', sucesora: '2.2.3', tipo: TipoDependencia.SS, desfaseDias: 10 },
   { predecesora: '2.1.1', sucesora: '2.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '2.1.2', sucesora: '3.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.2.1', sucesora: '2.3.1', tipo: TipoDependencia.SS, desfaseDias: 0 },
+  { predecesora: '2.2.2', sucesora: '2.3.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.2.1', sucesora: '2.3.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.2.2', sucesora: '2.3.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.3.3', sucesora: '3.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.3.1', sucesora: '3.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
   { predecesora: '3.1.1', sucesora: '3.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '3.1.1', sucesora: '3.2.1', tipo: TipoDependencia.SS, desfaseDias: 1 },
-  { predecesora: '3.2.1', sucesora: '3.2.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '3.1.2', sucesora: '3.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '3.1.2', sucesora: '4.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '4.1.1', sucesora: '4.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '4.1.2', sucesora: '4.2.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '4.2.1', sucesora: '4.2.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
-  { predecesora: '4.2.2', sucesora: '4.3.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.3.2', sucesora: '3.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.2.2', sucesora: '3.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.2.3', sucesora: '3.2', tipo: TipoDependencia.FF, desfaseDias: 10 },
+  { predecesora: '2.3.1', sucesora: '3.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.3.2', sucesora: '3.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.3.3', sucesora: '3.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.1.2', sucesora: '3.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.3', sucesora: '4.1', tipo: TipoDependencia.FF, desfaseDias: 10 },
+  { predecesora: '3.2', sucesora: '4.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.3', sucesora: '4.2.1', tipo: TipoDependencia.SS, desfaseDias: 0 },
+  { predecesora: '4.1', sucesora: '4.2.1', tipo: TipoDependencia.FF, desfaseDias: 5 },
+  { predecesora: '4.2.3', sucesora: '4.2.2', tipo: TipoDependencia.SF, desfaseDias: 0 },
+  { predecesora: '4.1', sucesora: '4.2.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '4.2.1', sucesora: '4.2.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '3.2', sucesora: '4.2.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '4.2.3', sucesora: '4.3', tipo: TipoDependencia.FS, desfaseDias: 0 },
 ];
 
 async function sembrarDependencias(proyectoId: number): Promise<void> {
@@ -712,9 +551,9 @@ async function planificarSemilla(proyectoId: number): Promise<void> {
     });
   }
 
-  if (plan.finProyecto !== '2027-01-12') {
+  if (plan.finProyecto !== '2027-05-28') {
     throw new Error(
-      `Fin de proyecto inesperado en seed: ${plan.finProyecto} (esperado: 2027-01-12)`,
+      `Fin de proyecto inesperado en seed: ${plan.finProyecto} (esperado: 2027-05-28)`,
     );
   }
 
@@ -722,10 +561,10 @@ async function planificarSemilla(proyectoId: number): Promise<void> {
     throw new Error(`Total de tareas inesperado en seed: ${plan.tareas.length} (esperado: 36)`);
   }
 
-  const tarea211 = plan.tareas.find((t) => t.codigo === '2.1.1');
-  const tarea212 = plan.tareas.find((t) => t.codigo === '2.1.2');
-  if (!tarea211 || !tarea211.esCritica || !tarea212 || !tarea212.esCritica) {
-    throw new Error('Las tareas 2.1.1 y 2.1.2 deben ser criticas en el seed.');
+  const tarea223 = plan.tareas.find((t) => t.codigo === '2.2.3');
+  const tarea33 = plan.tareas.find((t) => t.codigo === '3.3');
+  if (!tarea223 || !tarea223.esCritica || !tarea33 || !tarea33.esCritica) {
+    throw new Error('Las tareas 2.2.3 y 3.3 deben ser criticas en el seed.');
   }
 }
 
@@ -745,62 +584,61 @@ async function sembrarHitos(proyectoId: number): Promise<void> {
 
   const reloj = new Reloj();
   const hoy = reloj.hoy();
-  const fechaRevision = sumarDiasHabiles(hoy, 3, calendario);
 
   const definicionHitos = [
     {
-      nombre: 'Acta de inicio aprobada',
-      tareaId: null,
-      fechaObjetivo: fechaIsoADate('2026-10-30'),
-      fechaCumplimiento: fechaIsoADate('2026-10-29'),
-      criterio: 'Acta firmada por el dueño del taller',
-      responsable: 'Jefe de Proyecto',
+      nombre: 'Plan de gestión aprobado',
+      tareaId: buscarTarea('1.1.1').id,
+      fechaObjetivo: fechaIsoADate('2026-10-19'),
+      fechaCumplimiento: fechaIsoADate('2026-10-20'),
+      criterio: 'Plan de gestión aprobado por el patrocinador',
+      responsable: 'Claudio Morales',
       invariante: 'CUMPLIDO',
     },
     {
-      nombre: 'Procesos del taller levantados',
-      tareaId: buscarTarea('1.1').id,
-      fechaObjetivo: fechaIsoADate('2026-11-06'),
+      nombre: 'Fábrica de software contratada',
+      tareaId: buscarTarea('1.1.2').id,
+      fechaObjetivo: fechaIsoADate('2026-10-26'),
+      fechaCumplimiento: fechaIsoADate('2026-10-26'),
+      criterio: 'Contrato por hitos firmado con la fábrica',
+      responsable: 'Claudio Morales',
+      invariante: 'CUMPLIDO',
+    },
+    {
+      nombre: 'Procesos futuros validados',
+      tareaId: buscarTarea('1.2.1').id,
+      fechaObjetivo: fechaIsoADate('2026-11-11'),
       fechaCumplimiento: null,
-      criterio: 'Informe de procesos validado por el jefe de taller',
-      responsable: 'Jefe de Taller',
+      criterio: 'Procesos futuros de las 3 sucursales validados por el Gerente de Operaciones',
+      responsable: 'Valeska Guardia',
       invariante: 'ATRASADO',
     },
     {
-      nombre: 'Diseño de la solución aprobado',
-      tareaId: buscarTarea('1.2').id,
-      fechaObjetivo: fechaIsoADate('2026-11-20'),
+      nombre: 'Diseño aprobado',
+      tareaId: buscarTarea('1.3').id,
+      fechaObjetivo: fechaIsoADate('2026-12-17'),
       fechaCumplimiento: null,
-      criterio: 'Modelo de datos y prototipo aprobados',
-      responsable: 'Jefe de Proyecto',
-      invariante: null,
-    },
-    {
-      nombre: 'Módulo de órdenes operativo',
-      tareaId: buscarTarea('2.1').id,
-      fechaObjetivo: fechaIsoADate('2026-12-04'),
-      fechaCumplimiento: null,
-      criterio: 'Registro y seguimiento de órdenes probado en el taller',
-      responsable: 'Desarrollador Senior',
-      invariante: null,
-    },
-    {
-      nombre: 'Sistema en marcha blanca',
-      tareaId: buscarTarea('4').id,
-      fechaObjetivo: fechaIsoADate('2027-03-31'),
-      fechaCumplimiento: null,
-      criterio: 'Uso en paralelo durante dos semanas sin incidentes graves',
-      responsable: 'Jefe de Proyecto',
+      criterio: 'Arquitectura, modelo de datos y prototipos aprobados',
+      responsable: 'Andrés Contreras',
       invariante: 'PENDIENTE',
     },
     {
-      nombre: 'Revisión con el dueño del taller',
-      tareaId: null,
-      fechaObjetivo: fechaIsoADate(fechaRevision),
+      nombre: 'Primera operación funcional en las 3 sucursales',
+      tareaId: buscarTarea('4.2.3').id,
+      fechaObjetivo: fechaIsoADate('2027-04-30'),
       fechaCumplimiento: null,
-      criterio: 'Reunión de avance con acta',
-      responsable: 'Jefe de Proyecto',
-      invariante: 'EN_RIESGO',
+      criterio: 'Acta de puesta en marcha en Rancagua, Viña del Mar y Santiago',
+      responsable: 'Claudio Morales',
+      invariante: 'PENDIENTE',
+    },
+    {
+      nombre: 'Cierre del proyecto',
+      tareaId: buscarTarea('4.3').id,
+      fechaObjetivo: fechaIsoADate('2027-05-28'),
+      fechaCumplimiento: null,
+      criterio: 'Acta de cierre y plan de escalamiento aprobados por el patrocinador',
+      responsable: 'Claudio Morales',
+      invariante: 'PENDIENTE',
     },
   ];
 
@@ -850,6 +688,284 @@ async function sembrarHitos(proyectoId: number): Promise<void> {
   }
 }
 
+interface DetalleEtapaSemilla {
+  r?: string;
+  c?: string;
+  i?: string;
+  f?: string;
+  ev?: [string, string, string[]][];
+}
+
+const DETALLE_ETAPAS: Record<string, Record<string, DetalleEtapaSemilla>> = {
+  'SC-001': {
+    '1': {
+      r: 'Andrés Contreras',
+      c: 'Necesidad detectada en la prueba de concepto de 1.3.1: el servicio de recepción de órdenes del ERP exige configuración del proveedor no cubierta por las 60 horas contratadas. Se documentaron los métodos faltantes y se estimaron 40 horas adicionales. Pendiente: firma del Gerente de Finanzas para pasar a análisis.',
+      ev: [
+        [
+          'Informe_prueba_concepto_ERP.pdf',
+          'Informe de prueba de concepto del ERP (SC-001)',
+          [
+            'Tarea: 1.3.1 Diseñar integraciones y arquitectura',
+            'Resultado: el servicio de facturación responde, pero la recepción de órdenes',
+            'cerradas requiere habilitar 2 métodos adicionales del proveedor.',
+            'Estimación del proveedor: 40 horas x $60.000 = $2.400.000.',
+            'Riesgo asociado: R-02 (probabilidad 3, impacto 4).',
+            'Responsable: Andrés Contreras.',
+          ],
+        ],
+      ],
+    },
+    '2': { r: 'Valeska Guardia', i: '2026-11-17', f: '2026-11-20' },
+    '3': { r: 'Claudio Morales', i: '2026-11-23', f: '2026-11-25' },
+  },
+  'SC-002': {
+    '1': {
+      r: 'Valeska Guardia',
+      c: 'El Director Comercial pidió avisar al cliente cuando su garantía esté por vencer, con enlace al portal para agendar revisión. Se registró como solicitud de alcance vinculada a REQ-06 y REQ-08.',
+      ev: [
+        [
+          'Minuta_reunion_Director_Comercial.pdf',
+          'Minuta de reunión con el Director Comercial (SC-002)',
+          [
+            'Asistentes: Director Comercial, Valeska Guardia, Claudio Morales.',
+            'Necesidad: aviso por WhatsApp 30 días antes del vencimiento de la garantía,',
+            'con enlace al portal para agendar una revisión.',
+            'Beneficio esperado: más retorno de clientes y más uso del portal.',
+            'Requisitos relacionados: REQ-06 y REQ-08.',
+          ],
+        ],
+      ],
+    },
+    '2': {
+      r: 'Andrés Contreras',
+      c: 'Análisis de impacto: +3 días en 2.2.3 (historial y garantías, tarea crítica), asignación de Javiera Rivas al 40 % para las plantillas de alerta y +$2.000.000 de presupuesto. El cierre se movería del 28-05-2027 al 02-06-2027, dentro del límite del 04-06-2027.',
+      ev: [
+        [
+          'Informe_impacto_SC-002.pdf',
+          'Informe de impacto de SC-002',
+          [
+            'Duración: 2.2.3 pasa de 20 a 23 días hábiles (tarea crítica).',
+            'Recursos: Javiera Rivas al 40 % en 2.2.3 (plantillas de alerta).',
+            'Costo: presupuesto de $123.408.680 a $125.408.680.',
+            'Plazo: cierre del 28-05-2027 al 02-06-2027 (consume 3 de 5 días de reserva).',
+            'Fuente: simulación de la app antes de aprobar.',
+          ],
+        ],
+      ],
+    },
+    '3': {
+      r: 'Claudio Morales',
+      c: 'Riesgo evaluado como alto (probabilidad 3 x impacto 4 = 12) por consumir 3 de los 5 días de reserva de cronograma y por depender de la aprobación de plantillas de WhatsApp (R-12). Se recomienda aprobar con seguimiento semanal de la ruta crítica. Queda a decisión del Comité de Cambios.',
+      ev: [
+        [
+          'Matriz_riesgo_SC-002.pdf',
+          'Evaluación de riesgos de SC-002',
+          [
+            'Probabilidad: 3. Impacto: 4. Nivel: 12 (alto).',
+            'Riesgos relacionados: R-07 (atraso de la fábrica) y R-12 (plantillas de WhatsApp).',
+            'Reserva de cronograma disponible: 5 días hábiles; el cambio consume 3.',
+            'Recomendación: aprobar con seguimiento semanal de la ruta crítica.',
+          ],
+        ],
+      ],
+    },
+    '4': { r: 'Claudio Morales' },
+    '5': { r: 'Valeska Guardia' },
+    '6': { r: 'Andrés Contreras' },
+    '7': { r: 'Claudio Morales' },
+    '8': { r: 'Valeska Guardia' },
+    '9': { r: 'Claudio Morales' },
+    '10': { r: 'Valeska Guardia' },
+  },
+  'SC-003': {
+    '1': {
+      r: 'Bodega central',
+      c: 'Bodega central advirtió que la interfaz del inventario se cae en los cierres de mes. Sin respaldo, las órdenes quedarían sin repuestos registrados (REQ-04).',
+    },
+    '2': {
+      r: 'Andrés Contreras',
+      c: 'Se evaluaron dos alternativas: reintentos en línea o carga programada diaria del consumo. Se eligió la carga programada por su menor costo (estimado en $1.200.000 de horas de integración) y porque no modifica el inventario (RES-04).',
+    },
+    '3': {
+      r: 'Claudio Morales',
+      c: 'Riesgo medio-alto (2 x 4 = 8): sin la carga programada se incumpliría REQ-04 si falla la interfaz (R-03). El Comité de Cambios aprobó la solicitud el 25-10-2026.',
+      ev: [
+        [
+          'Acta_Comite_Cambios_SC-003.pdf',
+          'Acta del Comité de Cambios (SC-003)',
+          [
+            'Fecha: 25-10-2026.',
+            'Asistentes: Gerente General, Gerente de Operaciones, Director Comercial, Claudio Morales.',
+            'Decisión: APROBADA.',
+            'Fundamento: asegura el registro de repuestos por orden (REQ-04) ante fallas de la interfaz (R-03).',
+            'Condición: definir el formato del archivo con el proveedor del inventario.',
+          ],
+        ],
+      ],
+    },
+    '4': {
+      r: 'Andrés Contreras',
+      i: '2026-10-26',
+      f: '2026-11-20',
+      c: 'En curso: diseño del archivo de carga programada y del proceso nocturno de conciliación. Acción correctiva pendiente: acordar el formato con el proveedor del inventario.',
+    },
+    '5': { r: 'Valeska Guardia', i: '2026-11-23', f: '2026-11-24' },
+    '6': { r: 'Andrés Contreras', i: '2026-11-25', f: '2026-12-18' },
+    '7': { r: 'Claudio Morales', i: '2026-12-21', f: '2026-12-23' },
+    '8': { r: 'Valeska Guardia', i: '2026-12-28', f: '2026-12-29' },
+    '9': { r: 'Andrés Contreras', i: '2026-12-30', f: '2027-01-05' },
+    '10': { r: 'Valeska Guardia', i: '2027-01-06', f: '2027-01-15' },
+  },
+  'SC-004': {
+    '1': {
+      r: 'Valeska Guardia',
+      c: 'El área comercial pidió aplicaciones nativas para iOS y Android, además del portal responsivo.',
+    },
+    '2': {
+      r: 'Andrés Contreras',
+      c: 'Estimación: 3 meses de 2 desarrolladores móviles (unos $26.000.000) y publicación en tiendas. No cabe en la ruta crítica: movería el cierre más allá del límite del 04-06-2027.',
+    },
+    '3': {
+      r: 'Claudio Morales',
+      c: 'Riesgo alto (4 x 4 = 16): incumpliría RES-01 (plazo) y contradice EXC-01. El Comité de Cambios la rechazó el 28-10-2026 y la derivó al plan de escalamiento.',
+      ev: [
+        [
+          'Acta_Comite_Cambios_SC-004.pdf',
+          'Acta del Comité de Cambios (SC-004)',
+          [
+            'Fecha: 28-10-2026.',
+            'Decisión: RECHAZADA.',
+            'Fundamento: fuera del alcance aprobado (EXC-01); costo estimado de $26.000.000',
+            'y atraso del cierre más allá del límite de 8 meses (RES-01).',
+            'Derivación: evaluar en el plan de escalamiento posterior al piloto.',
+          ],
+        ],
+      ],
+    },
+  },
+  'SC-005': {
+    '1': {
+      r: 'Valeska Guardia',
+      c: 'Operaciones pidió que Finanzas valide el mapeo entre la orden de trabajo y el documento de cobro, para evitar diferencias entre presupuesto y cobro (317 reclamos al año).',
+    },
+    '2': {
+      r: 'Valeska Guardia',
+      c: 'El cambio solo agrega un paso de validación en 1.3.1; no cambia duraciones ni costos del proyecto.',
+    },
+    '3': {
+      r: 'Claudio Morales',
+      c: 'Riesgo bajo (1 x 2 = 2). Aprobada por el Comité de Cambios el 16-10-2026.',
+      ev: [
+        [
+          'Acta_Comite_Cambios_SC-005.pdf',
+          'Acta del Comité de Cambios (SC-005)',
+          [
+            'Fecha: 16-10-2026.',
+            'Decisión: APROBADA.',
+            'Fundamento: reduce el riesgo de diferencias entre presupuesto y cobro.',
+            'Impacto en cronograma y costo: ninguno.',
+          ],
+        ],
+      ],
+    },
+    '4': { r: 'Claudio Morales' },
+    '5': {
+      r: 'Valeska Guardia',
+      c: 'Se comunicó el nuevo paso a Finanzas, al arquitecto y al proveedor del ERP por correo y en la reunión semanal del 19-10-2026.',
+    },
+    '6': {
+      r: 'Andrés Contreras',
+      c: 'Finanzas revisó la matriz de mapeo campo por campo (montos, impuestos, descuentos y repuestos) y dejó 6 observaciones.',
+    },
+    '7': {
+      r: 'Claudio Morales',
+      c: 'Se verificó que las 6 observaciones quedaran registradas y asignadas; el mapeo pasó a versión 1.1.',
+    },
+    '8': { r: 'Valeska Guardia' },
+    '9': {
+      r: 'Valeska Guardia',
+      c: 'Acción correctiva: actualizar la matriz de mapeo con las observaciones de Finanzas. Cerrada el 30-10-2026.',
+    },
+    '10': {
+      r: 'Valeska Guardia',
+      c: 'Finanzas quedó como validador obligatorio en el procedimiento de cambios de integración. Adopción medida: 85 % de los campos del mapeo validados en la primera revisión.',
+      ev: [
+        [
+          'Informe_adopcion_SC-005.pdf',
+          'Informe de adopción de SC-005',
+          [
+            'Indicador: campos del mapeo validados por Finanzas en la primera revisión.',
+            'Resultado: 85 % (meta del KPI de adopción: 90 %).',
+            'Acción de mejora: incluir a Finanzas desde el diseño de cada nueva interfaz.',
+            'Estado: cambio adoptado y solicitud cerrada.',
+          ],
+        ],
+      ],
+    },
+  },
+};
+
+function textoPdf(texto: string): string {
+  return texto.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function crearPdfEvidencia(titulo: string, lineas: string[]): Buffer {
+  const contenido = [
+    'BT',
+    '/F1 14 Tf',
+    '50 780 Td',
+    `(${textoPdf(titulo)}) Tj`,
+    '/F1 10 Tf',
+    '0 -20 Td',
+    '(AutoFix Conecta - Piloto 3 sucursales) Tj',
+    ...lineas.flatMap((l) => ['0 -16 Td', `(${textoPdf(l)}) Tj`]),
+    'ET',
+  ].join('\n');
+  const cuerpo = Buffer.from(contenido, 'latin1');
+  const objetos = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+  ];
+  const partes: Buffer[] = [Buffer.from('%PDF-1.4\n', 'latin1')];
+  const desplazamientos: number[] = [];
+  let largo = partes[0]!.length;
+  const agregar = (b: Buffer) => {
+    partes.push(b);
+    largo += b.length;
+  };
+  objetos.forEach((o, i) => {
+    desplazamientos.push(largo);
+    agregar(Buffer.from(`${i + 1} 0 obj\n${o}\nendobj\n`, 'latin1'));
+  });
+  desplazamientos.push(largo);
+  agregar(Buffer.from(`5 0 obj\n<< /Length ${cuerpo.length} >>\nstream\n`, 'latin1'));
+  agregar(cuerpo);
+  agregar(Buffer.from('\nendstream\nendobj\n', 'latin1'));
+  const inicioXref = largo;
+  const xref = [
+    'xref',
+    `0 ${desplazamientos.length + 1}`,
+    '0000000000 65535 f ',
+    ...desplazamientos.map((d) => `${String(d).padStart(10, '0')} 00000 n `),
+    'trailer',
+    `<< /Size ${desplazamientos.length + 1} /Root 1 0 R >>`,
+    'startxref',
+    String(inicioXref),
+    '%%EOF',
+  ].join('\n');
+  agregar(Buffer.from(xref + '\n', 'latin1'));
+  return Buffer.concat(partes);
+}
+
+function guardarEvidenciaSemilla(nombreDisco: string, contenido: Buffer): void {
+  const directorio = process.env.RUTA_UPLOADS || resolve(process.cwd(), 'uploads');
+  mkdirSync(directorio, { recursive: true });
+  writeFileSync(join(directorio, nombreDisco), contenido);
+}
+
 async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
   const conteo = await prisma.solicitudCambio.count({ where: { proyectoId } });
   if (conteo > 0) return;
@@ -881,11 +997,13 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
   }[] = [
     {
       codigo: 'SC-001',
-      titulo: 'Ampliación de memoria en servidores de taller',
-      descripcion: 'Se requiere ampliar la memoria RAM para soportar mayor concurrencia.',
-      justificacion: 'Evitar degradación en horas punta de recepción.',
-      solicitante: 'Jefe de Taller',
-      responsable: 'Carlos Morales',
+      titulo: 'Ampliar las horas de soporte del proveedor del ERP',
+      descripcion:
+        'Contratar 40 horas adicionales del proveedor del ERP para habilitar el servicio de recepción de órdenes cerradas.',
+      justificacion:
+        'La prueba de concepto muestra que el servicio requiere configuración adicional del proveedor (riesgo R-02).',
+      solicitante: 'Andrés Contreras',
+      responsable: 'Claudio Morales',
       prioridad: Prioridad.MEDIA,
       categoria: CategoriaCambio.RECURSO,
       probabilidadRiesgo: 2,
@@ -895,11 +1013,13 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
     },
     {
       codigo: 'SC-002',
-      titulo: 'Integración de pasarela de pago web',
-      descripcion: 'Permitir el pago de presupuestos directamente desde la aplicación.',
-      justificacion: 'Reducir filas en caja y mejorar el flujo de caja.',
-      solicitante: 'Gerente Comercial',
-      responsable: 'Valeria Guardia',
+      titulo: 'Alertas de vencimiento de garantía por WhatsApp Business',
+      descripcion:
+        'Agregar avisos automáticos al cliente cuando una garantía está por vencer, con enlace al portal para agendar revisión.',
+      justificacion:
+        'El Director Comercial busca aumentar el retorno de clientes y el uso del portal (REQ-06 y REQ-08).',
+      solicitante: 'Director Comercial',
+      responsable: 'Valeska Guardia',
       prioridad: Prioridad.ALTA,
       categoria: CategoriaCambio.ALCANCE,
       probabilidadRiesgo: 3,
@@ -916,11 +1036,13 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
     },
     {
       codigo: 'SC-003',
-      titulo: 'Incorporación de escáneres OBD-II Bluetooth',
-      descripcion: 'Adquisición y sincronización de nuevos lectores inalámbricos.',
-      justificacion: 'Diagnóstico directo en bahía sin mover vehículos.',
-      solicitante: 'Jefe de Diagnóstico',
-      responsable: 'Carlos Morales',
+      titulo: 'Carga programada de inventario como respaldo de la integración',
+      descripcion:
+        'Implementar una carga programada diaria del consumo de repuestos si la interfaz del inventario no responde.',
+      justificacion:
+        'Asegurar el registro de repuestos por orden aunque falle la interfaz en línea (riesgo R-03).',
+      solicitante: 'Bodega central',
+      responsable: 'Claudio Morales',
       prioridad: Prioridad.ALTA,
       categoria: CategoriaCambio.COSTO,
       probabilidadRiesgo: 2,
@@ -929,8 +1051,9 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
       fechaDecision: new Date('2026-10-28T14:00:00.000Z'),
       accionesCorrectivas: [
         {
-          descripcion: 'Ajuste de calibración de escáneres',
-          responsable: 'Carlos Morales',
+          descripcion:
+            'Definir el formato del archivo de carga programada con el proveedor del inventario',
+          responsable: 'Andrés Contreras',
           fechaCompromiso: '2026-11-20',
           estado: EstadoAccion.PENDIENTE,
         },
@@ -948,18 +1071,20 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
     },
     {
       codigo: 'SC-004',
-      titulo: 'Reemplazo total de tabletas de mecánicos',
-      descripcion: 'Sustitución de tabletas por modelos de gama alta.',
-      justificacion: 'Preferencia de marca.',
-      solicitante: 'Mecánico Senior',
-      responsable: 'Valeria Guardia',
+      titulo: 'Aplicación móvil nativa para clientes',
+      descripcion:
+        'Desarrollar aplicaciones nativas para iOS y Android además del portal web responsivo.',
+      justificacion: 'Preferencia del área comercial por presencia en tiendas de aplicaciones.',
+      solicitante: 'Director Comercial',
+      responsable: 'Valeska Guardia',
       prioridad: Prioridad.BAJA,
       categoria: CategoriaCambio.COSTO,
       probabilidadRiesgo: 4,
       impactoRiesgo: 4,
       fechaRegistro: new Date('2026-10-18T16:00:00.000Z'),
       fechaDecision: new Date('2026-10-29T17:00:00.000Z'),
-      motivoRechazo: 'Costo excesivo no justificado por necesidades técnicas.',
+      motivoRechazo:
+        'Fuera del alcance aprobado (EXC-01): no cabe en el plazo de 8 meses ni en el presupuesto; se evaluará en el escalamiento.',
       pasos: [
         [1, 'iniciar'],
         [1, 'completar'],
@@ -972,25 +1097,27 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
     },
     {
       codigo: 'SC-005',
-      titulo: 'Protocolo de sanitización y entrega limpia de vehículos',
-      descripcion: 'Procedimiento de limpieza antes de entregar el automóvil al cliente.',
-      justificacion: 'Mejorar satisfacción del cliente y evaluación del taller.',
-      solicitante: 'Atención al Cliente',
-      responsable: 'Valeria Guardia',
+      titulo: 'Incorporar a Finanzas en la validación del mapeo de facturación',
+      descripcion:
+        'Agregar a Finanzas como validador obligatorio del mapeo de datos entre la orden de trabajo y el documento de cobro.',
+      justificacion:
+        'Reducir el riesgo de diferencias entre presupuesto y cobro (317 reclamos al año).',
+      solicitante: 'Gerente de Operaciones',
+      responsable: 'Valeska Guardia',
       prioridad: Prioridad.MEDIA,
       categoria: CategoriaCambio.CALIDAD,
       probabilidadRiesgo: 1,
       impactoRiesgo: 2,
-      fechaRegistro: new Date('2026-10-01T08:30:00.000Z'),
-      fechaDecision: new Date('2026-10-10T11:00:00.000Z'),
-      fechaCierre: new Date('2026-10-30T18:00:00.000Z'),
+      fechaRegistro: new Date('2026-10-06T08:30:00.000Z'),
+      fechaDecision: new Date('2026-10-16T11:00:00.000Z'),
+      fechaCierre: new Date('2026-11-06T18:00:00.000Z'),
       adopcion: 85,
       accionesCorrectivas: [
         {
-          descripcion: 'Ajuste en disponibilidad de insumos de aspirado',
-          responsable: 'Jefe de Taller',
-          fechaCompromiso: '2026-10-20',
-          fechaCierre: '2026-10-22',
+          descripcion: 'Actualizar la matriz de mapeo con las observaciones de Finanzas',
+          responsable: 'Valeska Guardia',
+          fechaCompromiso: '2026-10-28',
+          fechaCierre: '2026-10-30',
           estado: EstadoAccion.CERRADA,
         },
       ],
@@ -1002,7 +1129,7 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
         [3, 'iniciar'],
         [3, 'completar'],
         ['decidir', 'aprobar'],
-        [4, 'omitir', { comentario: 'Procedimiento operativo estándar previamente validado' }],
+        [4, 'omitir', { comentario: 'Cambio de procedimiento sin impacto en el cronograma' }],
         [5, 'iniciar'],
         [5, 'completar'],
         [6, 'iniciar'],
@@ -1080,8 +1207,21 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
     });
 
     for (const etapaMod of estadoModelo.etapas) {
-      let fechaInicioSeed: Date | null = null;
-      let fechaFinSeed: Date | null = null;
+      const detalle = DETALLE_ETAPAS[def.codigo]?.[String(etapaMod.numero)] ?? {};
+      const iniciada = etapaMod.fechaIniciada ? String(etapaMod.fechaIniciada).slice(0, 10) : null;
+      const completada = etapaMod.fechaCompletada
+        ? String(etapaMod.fechaCompletada).slice(0, 10)
+        : null;
+      let fechaInicioSeed: Date | null = detalle.i
+        ? fechaIsoADate(detalle.i)
+        : iniciada
+          ? fechaIsoADate(iniciada)
+          : null;
+      let fechaFinSeed: Date | null = detalle.f
+        ? fechaIsoADate(detalle.f)
+        : completada
+          ? fechaIsoADate(completada)
+          : null;
       if (def.codigo === 'SC-001' && etapaMod.numero === 1) {
         fechaInicioSeed = fechaIsoADate('2026-10-26');
         fechaFinSeed = fechaIsoADate('2026-10-30');
@@ -1101,13 +1241,31 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
           fechaCompletada: etapaMod.fechaCompletada
             ? fechaIsoADate(String(etapaMod.fechaCompletada).slice(0, 10))
             : null,
-          comentario: etapaMod.comentario ?? null,
+          responsable: detalle.r ?? null,
+          comentario: etapaMod.comentario ?? detalle.c ?? null,
           porcentajeAdopcion:
             def.codigo === 'SC-005' && etapaMod.numero === 10 && def.adopcion
               ? new Prisma.Decimal(def.adopcion)
               : null,
         },
       });
+
+      for (const [indice, [nombreArchivo, titulo, lineas]] of (detalle.ev ?? []).entries()) {
+        const contenido = crearPdfEvidencia(titulo, lineas);
+        const nombreDisco = `semilla-${def.codigo.toLowerCase()}-etapa${etapaMod.numero}-${indice + 1}.pdf`;
+        guardarEvidenciaSemilla(nombreDisco, contenido);
+        await prisma.evidencia.create({
+          data: {
+            etapaId: creadaEtapa.id,
+            nombreArchivo,
+            rutaArchivo: nombreDisco,
+            tipoMime: 'application/pdf',
+            tamanoBytes: contenido.length,
+            subidoPor:
+              def.codigo === 'SC-001' ? RolUsuario.JEFE_PROYECTO : RolUsuario.COMITE_CAMBIOS,
+          },
+        });
+      }
 
       const debeCrearAcciones =
         def.accionesCorrectivas &&
@@ -1131,34 +1289,35 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
     }
 
     if (def.codigo === 'SC-002') {
-      const tarea121 = await prisma.tarea.findFirst({
-        where: { proyectoId, codigo: '1.2.1' },
+      const tarea223 = await prisma.tarea.findFirst({
+        where: { proyectoId, codigo: '2.2.3' },
       });
-      const profDiego = await prisma.profesional.findFirst({
-        where: { claveNombre: 'diego pizarro' },
+      const profJaviera = await prisma.profesional.findFirst({
+        where: { claveNombre: 'javiera rivas' },
       });
-      if (tarea121) {
+      if (tarea223) {
         await prisma.impactoCambio.create({
           data: {
             solicitudId: solicitud.id,
             tipo: 'DURACION',
-            tareaId: tarea121.id,
-            descripcion: 'Aumento de 3 días en desarrollo de interfaz',
-            datos: { duracionDias: tarea121.duracionDias + 3 },
+            tareaId: tarea223.id,
+            descripcion:
+              'Aumento de 3 días en historial y garantías por las alertas de vencimiento',
+            datos: { duracionDias: tarea223.duracionDias + 3 },
             aplicado: false,
           },
         });
-        if (profDiego) {
+        if (profJaviera) {
           await prisma.impactoCambio.create({
             data: {
               solicitudId: solicitud.id,
               tipo: 'ASIGNACION',
-              tareaId: tarea121.id,
-              descripcion: 'Asignación de soporte técnico a interfaz',
+              tareaId: tarea223.id,
+              descripcion: 'Asignación de la diseñadora UX/UI a las plantillas de alerta',
               datos: {
                 operacion: 'agregar',
                 elemento: 'PROFESIONAL',
-                profesionalId: profDiego.id,
+                profesionalId: profJaviera.id,
                 dedicacion: 40,
               },
               aplicado: false,
@@ -1169,8 +1328,8 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
           data: {
             solicitudId: solicitud.id,
             tipo: 'PRESUPUESTO',
-            descripcion: 'Aumento de presupuesto por nuevas funcionalidades',
-            datos: { presupuesto: 48000000 },
+            descripcion: 'Aumento de presupuesto por las alertas de vencimiento de garantía',
+            datos: { presupuesto: 125408680 },
             aplicado: false,
           },
         });
@@ -1190,34 +1349,34 @@ async function sembrarCatalogos(): Promise<void> {
 
   const PROFESIONALES_SEMILLA = [
     {
-      nombre: 'Rodrigo Fuentes',
-      cargo: 'Jefe de taller',
-      tarifaHora: 12000,
+      nombre: 'Claudio Morales',
+      cargo: 'Director del proyecto',
+      tarifaHora: 20800,
       horasDiarias: 8,
     },
     {
-      nombre: 'Camila Rojas',
-      cargo: 'Mecánica senior',
-      tarifaHora: 9500,
+      nombre: 'Valeska Guardia',
+      cargo: 'Analista funcional y Product Owner',
+      tarifaHora: 15500,
       horasDiarias: 8,
     },
     {
-      nombre: 'Matías Soto',
-      cargo: 'Mecánico',
-      tarifaHora: 7500,
+      nombre: 'Andrés Contreras',
+      cargo: 'Arquitecto y líder técnico (fábrica)',
+      tarifaHora: 19000,
       horasDiarias: 8,
     },
     {
-      nombre: 'Valentina Muñoz',
-      cargo: 'Desarrolladora de software',
-      tarifaHora: 11000,
-      horasDiarias: 7.5,
+      nombre: 'Paula Navarro',
+      cargo: 'Analista de control de calidad (fábrica)',
+      tarifaHora: 12500,
+      horasDiarias: 8,
     },
     {
-      nombre: 'Diego Pizarro',
-      cargo: 'Técnico de soporte',
-      tarifaHora: 8000,
-      horasDiarias: 6,
+      nombre: 'Javiera Rivas',
+      cargo: 'Diseñadora UX/UI',
+      tarifaHora: 14900,
+      horasDiarias: 8,
     },
   ];
 
@@ -1241,46 +1400,58 @@ async function sembrarCatalogos(): Promise<void> {
 
   const RECURSOS_SEMILLA = [
     {
-      nombre: 'Mecánico subcontratado',
+      nombre: 'Desarrollador de aplicaciones (fábrica)',
       tipo: 'Humano',
       unidad: 'hora',
-      costoUnitario: 9000,
+      costoUnitario: 16100,
     },
     {
-      nombre: 'Elevador hidráulico de dos columnas',
-      tipo: 'Equipamiento',
-      unidad: 'día',
-      costoUnitario: 25000,
-    },
-    {
-      nombre: 'Escáner de diagnóstico OBD-II',
-      tipo: 'Equipamiento',
+      nombre: 'Desarrollador de integraciones (fábrica)',
+      tipo: 'Humano',
       unidad: 'hora',
-      costoUnitario: 3500,
+      costoUnitario: 17900,
     },
     {
-      nombre: 'Aceite de motor 5W-30',
-      tipo: 'Material',
-      unidad: 'litro',
-      costoUnitario: 7990,
+      nombre: 'Especialista en capacitación y gestión del cambio',
+      tipo: 'Humano',
+      unidad: 'hora',
+      costoUnitario: 14300,
     },
     {
-      nombre: 'Filtro de aceite',
+      nombre: 'Tableta para recepción y taller',
+      tipo: 'Equipamiento',
+      unidad: 'unidad',
+      costoUnitario: 450000,
+    },
+    {
+      nombre: 'Kit de capacitación impreso',
       tipo: 'Material',
       unidad: 'unidad',
-      costoUnitario: 6500,
+      costoUnitario: 50000,
     },
     {
-      nombre: 'Licencia de software de gestión del taller',
+      nombre: 'Infraestructura en la nube (3 ambientes)',
       tipo: 'Servicio',
       unidad: 'mes',
-      costoUnitario: 45000,
+      costoUnitario: 900000,
     },
     {
-      nombre: 'Alineación y balanceo externo',
+      nombre: 'Servicio WhatsApp Business',
+      tipo: 'Servicio',
+      unidad: 'mes',
+      costoUnitario: 400000,
+    },
+    {
+      nombre: 'Horas de soporte del proveedor del ERP',
+      tipo: 'Servicio',
+      unidad: 'hora',
+      costoUnitario: 60000,
+    },
+    {
+      nombre: 'Servicio de depuración y migración de datos',
       tipo: 'Servicio',
       unidad: 'servicio',
-      costoUnitario: 25000,
+      costoUnitario: 4000000,
     },
   ];
 
@@ -1302,219 +1473,291 @@ async function sembrarCatalogos(): Promise<void> {
   }
 }
 
+const ASIGNACIONES_SEMILLA: {
+  tarea: string;
+  profesional?: string;
+  recurso?: string;
+  dedicacion?: number;
+  horasReales?: number | null;
+  cantidadPlan?: number;
+  cantidadReal?: number | null;
+}[] = [
+  { tarea: '1.1.1', profesional: 'Claudio Morales', dedicacion: 50, horasReales: 44 },
+  { tarea: '1.1.2', profesional: 'Claudio Morales', dedicacion: 50, horasReales: 60 },
+  { tarea: '1.2.1', profesional: 'Valeska Guardia', dedicacion: 100, horasReales: 100 },
+  { tarea: '1.2.1', profesional: 'Claudio Morales', dedicacion: 20, horasReales: 20 },
+  { tarea: '1.2.2', profesional: 'Valeska Guardia', dedicacion: 100, horasReales: null },
+  { tarea: '1.2.2', profesional: 'Claudio Morales', dedicacion: 20, horasReales: null },
+  { tarea: '1.3.1', profesional: 'Andrés Contreras', dedicacion: 50, horasReales: 54 },
+  {
+    tarea: '1.3.1',
+    recurso: 'Desarrollador de integraciones (fábrica)',
+    cantidadPlan: 56,
+    cantidadReal: 30,
+  },
+  {
+    tarea: '1.3.1',
+    recurso: 'Horas de soporte del proveedor del ERP',
+    cantidadPlan: 10,
+    cantidadReal: 10,
+  },
+  {
+    tarea: '1.3.1',
+    recurso: 'Infraestructura en la nube (3 ambientes)',
+    cantidadPlan: 0.5,
+    cantidadReal: null,
+  },
+  { tarea: '1.3.2', profesional: 'Andrés Contreras', dedicacion: 50, horasReales: 12 },
+  { tarea: '1.3.3', profesional: 'Javiera Rivas', dedicacion: 100, horasReales: null },
+  { tarea: '2.1.1', profesional: 'Andrés Contreras', dedicacion: 30, horasReales: null },
+  { tarea: '2.1.1', profesional: 'Paula Navarro', dedicacion: 25, horasReales: null },
+  {
+    tarea: '2.1.1',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 200,
+    cantidadReal: null,
+  },
+  {
+    tarea: '2.1.1',
+    recurso: 'Infraestructura en la nube (3 ambientes)',
+    cantidadPlan: 1.5,
+    cantidadReal: null,
+  },
+  { tarea: '2.1.2', profesional: 'Paula Navarro', dedicacion: 25, horasReales: null },
+  { tarea: '2.1.2', profesional: 'Valeska Guardia', dedicacion: 40, horasReales: null },
+  { tarea: '2.1.2', profesional: 'Claudio Morales', dedicacion: 20, horasReales: null },
+  {
+    tarea: '2.1.2',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 200,
+    cantidadReal: null,
+  },
+  { tarea: '2.2.1', profesional: 'Paula Navarro', dedicacion: 25, horasReales: null },
+  { tarea: '2.2.1', profesional: 'Valeska Guardia', dedicacion: 40, horasReales: null },
+  { tarea: '2.2.1', profesional: 'Claudio Morales', dedicacion: 20, horasReales: null },
+  {
+    tarea: '2.2.1',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 120,
+    cantidadReal: null,
+  },
+  { tarea: '2.2.2', profesional: 'Paula Navarro', dedicacion: 25, horasReales: null },
+  {
+    tarea: '2.2.2',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 80,
+    cantidadReal: null,
+  },
+  {
+    tarea: '2.2.2',
+    recurso: 'Desarrollador de integraciones (fábrica)',
+    cantidadPlan: 20,
+    cantidadReal: null,
+  },
+  { tarea: '2.2.3', profesional: 'Andrés Contreras', dedicacion: 30, horasReales: null },
+  { tarea: '2.2.3', profesional: 'Paula Navarro', dedicacion: 25, horasReales: null },
+  {
+    tarea: '2.2.3',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 160,
+    cantidadReal: null,
+  },
+  { tarea: '2.3.1', profesional: 'Andrés Contreras', dedicacion: 30, horasReales: null },
+  { tarea: '2.3.1', profesional: 'Paula Navarro', dedicacion: 25, horasReales: null },
+  { tarea: '2.3.1', profesional: 'Javiera Rivas', dedicacion: 30, horasReales: null },
+  {
+    tarea: '2.3.1',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 200,
+    cantidadReal: null,
+  },
+  {
+    tarea: '2.3.1',
+    recurso: 'Infraestructura en la nube (3 ambientes)',
+    cantidadPlan: 1.5,
+    cantidadReal: null,
+  },
+  { tarea: '2.3.2', profesional: 'Paula Navarro', dedicacion: 25, horasReales: null },
+  {
+    tarea: '2.3.2',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 80,
+    cantidadReal: null,
+  },
+  { tarea: '2.3.2', recurso: 'Servicio WhatsApp Business', cantidadPlan: 1, cantidadReal: null },
+  { tarea: '2.3.3', profesional: 'Paula Navarro', dedicacion: 25, horasReales: null },
+  { tarea: '2.3.3', profesional: 'Valeska Guardia', dedicacion: 40, horasReales: null },
+  { tarea: '2.3.3', profesional: 'Claudio Morales', dedicacion: 20, horasReales: null },
+  {
+    tarea: '2.3.3',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 80,
+    cantidadReal: null,
+  },
+  {
+    tarea: '3.1.1',
+    recurso: 'Desarrollador de integraciones (fábrica)',
+    cantidadPlan: 160,
+    cantidadReal: null,
+  },
+  {
+    tarea: '3.1.2',
+    recurso: 'Desarrollador de integraciones (fábrica)',
+    cantidadPlan: 160,
+    cantidadReal: null,
+  },
+  {
+    tarea: '3.1.2',
+    recurso: 'Horas de soporte del proveedor del ERP',
+    cantidadPlan: 50,
+    cantidadReal: null,
+  },
+  { tarea: '3.2', profesional: 'Valeska Guardia', dedicacion: 30, horasReales: null },
+  { tarea: '3.2', profesional: 'Andrés Contreras', dedicacion: 10, horasReales: null },
+  {
+    tarea: '3.2',
+    recurso: 'Servicio de depuración y migración de datos',
+    cantidadPlan: 1,
+    cantidadReal: null,
+  },
+  { tarea: '3.3', profesional: 'Paula Navarro', dedicacion: 100, horasReales: null },
+  { tarea: '3.3', profesional: 'Andrés Contreras', dedicacion: 30, horasReales: null },
+  { tarea: '3.3', profesional: 'Claudio Morales', dedicacion: 20, horasReales: null },
+  {
+    tarea: '3.3',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 240,
+    cantidadReal: null,
+  },
+  {
+    tarea: '3.3',
+    recurso: 'Desarrollador de integraciones (fábrica)',
+    cantidadPlan: 60,
+    cantidadReal: null,
+  },
+  {
+    tarea: '3.3',
+    recurso: 'Infraestructura en la nube (3 ambientes)',
+    cantidadPlan: 0.75,
+    cantidadReal: null,
+  },
+  { tarea: '4.1', profesional: 'Valeska Guardia', dedicacion: 100, horasReales: null },
+  { tarea: '4.1', profesional: 'Claudio Morales', dedicacion: 20, horasReales: null },
+  {
+    tarea: '4.1',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 120,
+    cantidadReal: null,
+  },
+  { tarea: '4.1', recurso: 'Servicio WhatsApp Business', cantidadPlan: 1, cantidadReal: null },
+  {
+    tarea: '4.1',
+    recurso: 'Infraestructura en la nube (3 ambientes)',
+    cantidadPlan: 0.75,
+    cantidadReal: null,
+  },
+  {
+    tarea: '4.2.1',
+    recurso: 'Especialista en capacitación y gestión del cambio',
+    cantidadPlan: 200,
+    cantidadReal: null,
+  },
+  { tarea: '4.2.1', recurso: 'Kit de capacitación impreso', cantidadPlan: 50, cantidadReal: null },
+  {
+    tarea: '4.2.2',
+    recurso: 'Tableta para recepción y taller',
+    cantidadPlan: 12,
+    cantidadReal: null,
+  },
+  { tarea: '4.2.3', profesional: 'Claudio Morales', dedicacion: 50, horasReales: null },
+  { tarea: '4.2.3', profesional: 'Valeska Guardia', dedicacion: 50, horasReales: null },
+  { tarea: '4.2.3', profesional: 'Andrés Contreras', dedicacion: 40, horasReales: null },
+  {
+    tarea: '4.2.3',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 104,
+    cantidadReal: null,
+  },
+  {
+    tarea: '4.2.3',
+    recurso: 'Especialista en capacitación y gestión del cambio',
+    cantidadPlan: 52,
+    cantidadReal: null,
+  },
+  { tarea: '4.2.3', recurso: 'Servicio WhatsApp Business', cantidadPlan: 1, cantidadReal: null },
+  { tarea: '4.3', profesional: 'Claudio Morales', dedicacion: 50, horasReales: null },
+  { tarea: '4.3', profesional: 'Valeska Guardia', dedicacion: 50, horasReales: null },
+  { tarea: '4.3', profesional: 'Andrés Contreras', dedicacion: 50, horasReales: null },
+  { tarea: '4.3', profesional: 'Paula Navarro', dedicacion: 30, horasReales: null },
+  {
+    tarea: '4.3',
+    recurso: 'Desarrollador de aplicaciones (fábrica)',
+    cantidadPlan: 152,
+    cantidadReal: null,
+  },
+  {
+    tarea: '4.3',
+    recurso: 'Especialista en capacitación y gestión del cambio',
+    cantidadPlan: 46,
+    cantidadReal: null,
+  },
+  { tarea: '4.3', recurso: 'Servicio WhatsApp Business', cantidadPlan: 2, cantidadReal: null },
+  {
+    tarea: '4.3',
+    recurso: 'Infraestructura en la nube (3 ambientes)',
+    cantidadPlan: 1,
+    cantidadReal: null,
+  },
+];
+
 async function sembrarAsignaciones(proyectoId: number): Promise<void> {
-  const valentina = await prisma.profesional.findFirstOrThrow({
-    where: { nombre: 'Valentina Muñoz' },
-  });
-  const rodrigo = await prisma.profesional.findFirstOrThrow({
-    where: { nombre: 'Rodrigo Fuentes' },
-  });
-  const camila = await prisma.profesional.findFirstOrThrow({
-    where: { nombre: 'Camila Rojas' },
-  });
-  const matias = await prisma.profesional.findFirstOrThrow({
-    where: { nombre: 'Matías Soto' },
-  });
-  const diego = await prisma.profesional.findFirstOrThrow({
-    where: { nombre: 'Diego Pizarro' },
-  });
-  const recursoEscaner = await prisma.recurso.findFirstOrThrow({
-    where: { nombre: 'Escáner de diagnóstico OBD-II' },
-  });
+  const conteo = await prisma.asignacion.count({ where: { tarea: { proyectoId } } });
+  if (conteo > 0) return;
 
   const tareas = await prisma.tarea.findMany({ where: { proyectoId } });
-  const t111 = tareas.find((t) => t.codigo === '1.1.1');
-  const t112 = tareas.find((t) => t.codigo === '1.1.2');
-  const t121 = tareas.find((t) => t.codigo === '1.2.1');
-  const t122 = tareas.find((t) => t.codigo === '1.2.2');
-  const t211 = tareas.find((t) => t.codigo === '2.1.1');
-  const t321 = tareas.find((t) => t.codigo === '3.2.1');
-  const t431 = tareas.find((t) => t.codigo === '4.3.1');
-  if (!t111 || !t112 || !t121 || !t122) return;
+  const porCodigo = new Map(tareas.map((t) => [t.codigo, t]));
 
-  const horasPlan111 = calcularHorasPlan(t111.duracionDias, Number(rodrigo.horasDiarias), 50);
-  await prisma.asignacion.upsert({
-    where: {
-      tareaId_profesionalId: {
-        tareaId: t111.id,
-        profesionalId: rodrigo.id,
-      },
-    },
-    create: {
-      tareaId: t111.id,
-      profesionalId: rodrigo.id,
-      dedicacion: new Prisma.Decimal(50),
-      horasPlan: new Prisma.Decimal(horasPlan111),
-      horasReales: new Prisma.Decimal(horasPlan111),
-      tarifaAplicada: rodrigo.tarifaHora,
-    },
-    update: {
-      dedicacion: new Prisma.Decimal(50),
-      horasPlan: new Prisma.Decimal(horasPlan111),
-      horasReales: new Prisma.Decimal(horasPlan111),
-      tarifaAplicada: rodrigo.tarifaHora,
-    },
-  });
-
-  const horasPlan112 = calcularHorasPlan(t112.duracionDias, Number(camila.horasDiarias), 50);
-  await prisma.asignacion.upsert({
-    where: {
-      tareaId_profesionalId: {
-        tareaId: t112.id,
-        profesionalId: camila.id,
-      },
-    },
-    create: {
-      tareaId: t112.id,
-      profesionalId: camila.id,
-      dedicacion: new Prisma.Decimal(50),
-      horasPlan: new Prisma.Decimal(horasPlan112),
-      horasReales: new Prisma.Decimal(horasPlan112 / 2),
-      tarifaAplicada: camila.tarifaHora,
-    },
-    update: {
-      dedicacion: new Prisma.Decimal(50),
-      horasPlan: new Prisma.Decimal(horasPlan112),
-      horasReales: new Prisma.Decimal(horasPlan112 / 2),
-      tarifaAplicada: camila.tarifaHora,
-    },
-  });
-
-  const horasPlan121 = calcularHorasPlan(t121.duracionDias, Number(valentina.horasDiarias), 60);
-  await prisma.asignacion.upsert({
-    where: {
-      tareaId_profesionalId: {
-        tareaId: t121.id,
-        profesionalId: valentina.id,
-      },
-    },
-    create: {
-      tareaId: t121.id,
-      profesionalId: valentina.id,
-      dedicacion: new Prisma.Decimal(60),
-      horasPlan: new Prisma.Decimal(horasPlan121),
-      horasReales: new Prisma.Decimal(5),
-      tarifaAplicada: valentina.tarifaHora,
-    },
-    update: {
-      dedicacion: new Prisma.Decimal(60),
-      horasPlan: new Prisma.Decimal(horasPlan121),
-      horasReales: new Prisma.Decimal(5),
-      tarifaAplicada: valentina.tarifaHora,
-    },
-  });
-
-  const horasPlan122 = calcularHorasPlan(t122.duracionDias, Number(valentina.horasDiarias), 60);
-  await prisma.asignacion.upsert({
-    where: {
-      tareaId_profesionalId: {
-        tareaId: t122.id,
-        profesionalId: valentina.id,
-      },
-    },
-    create: {
-      tareaId: t122.id,
-      profesionalId: valentina.id,
-      dedicacion: new Prisma.Decimal(60),
-      horasPlan: new Prisma.Decimal(horasPlan122),
-      tarifaAplicada: valentina.tarifaHora,
-    },
-    update: {
-      dedicacion: new Prisma.Decimal(60),
-      horasPlan: new Prisma.Decimal(horasPlan122),
-      tarifaAplicada: valentina.tarifaHora,
-    },
-  });
-
-  await prisma.asignacion.upsert({
-    where: {
-      tareaId_recursoId: {
-        tareaId: t121.id,
-        recursoId: recursoEscaner.id,
-      },
-    },
-    create: {
-      tareaId: t121.id,
-      recursoId: recursoEscaner.id,
-      cantidadPlan: new Prisma.Decimal(10),
-      costoUnitarioAplicado: recursoEscaner.costoUnitario,
-    },
-    update: {
-      cantidadPlan: new Prisma.Decimal(10),
-      costoUnitarioAplicado: recursoEscaner.costoUnitario,
-    },
-  });
-
-  if (t211) {
-    const horasPlan211 = calcularHorasPlan(t211.duracionDias, Number(matias.horasDiarias), 50);
-    await prisma.asignacion.upsert({
-      where: {
-        tareaId_profesionalId: {
-          tareaId: t211.id,
-          profesionalId: matias.id,
+  for (const def of ASIGNACIONES_SEMILLA) {
+    const tarea = porCodigo.get(def.tarea);
+    if (!tarea) throw new Error(`Tarea ${def.tarea} no encontrada para asignación en seed.`);
+    if (def.profesional) {
+      const profesional = await prisma.profesional.findFirstOrThrow({
+        where: { nombre: def.profesional },
+      });
+      const dedicacion = def.dedicacion ?? 100;
+      const horasPlan = calcularHorasPlan(
+        tarea.duracionDias,
+        Number(profesional.horasDiarias),
+        dedicacion,
+      );
+      await prisma.asignacion.create({
+        data: {
+          tareaId: tarea.id,
+          profesionalId: profesional.id,
+          dedicacion: new Prisma.Decimal(dedicacion),
+          horasPlan: new Prisma.Decimal(horasPlan),
+          horasReales:
+            def.horasReales === undefined || def.horasReales === null
+              ? null
+              : new Prisma.Decimal(def.horasReales),
+          tarifaAplicada: profesional.tarifaHora,
         },
-      },
-      create: {
-        tareaId: t211.id,
-        profesionalId: matias.id,
-        dedicacion: new Prisma.Decimal(50),
-        horasPlan: new Prisma.Decimal(horasPlan211),
-        tarifaAplicada: matias.tarifaHora,
-      },
-      update: {
-        dedicacion: new Prisma.Decimal(50),
-        horasPlan: new Prisma.Decimal(horasPlan211),
-        tarifaAplicada: matias.tarifaHora,
-      },
-    });
-  }
-
-  if (t321) {
-    const horasPlan321 = calcularHorasPlan(t321.duracionDias, Number(diego.horasDiarias), 40);
-    await prisma.asignacion.upsert({
-      where: {
-        tareaId_profesionalId: {
-          tareaId: t321.id,
-          profesionalId: diego.id,
+      });
+    } else if (def.recurso) {
+      const recurso = await prisma.recurso.findFirstOrThrow({ where: { nombre: def.recurso } });
+      await prisma.asignacion.create({
+        data: {
+          tareaId: tarea.id,
+          recursoId: recurso.id,
+          cantidadPlan: new Prisma.Decimal(def.cantidadPlan ?? 0),
+          cantidadReal:
+            def.cantidadReal === undefined || def.cantidadReal === null
+              ? null
+              : new Prisma.Decimal(def.cantidadReal),
+          costoUnitarioAplicado: recurso.costoUnitario,
         },
-      },
-      create: {
-        tareaId: t321.id,
-        profesionalId: diego.id,
-        dedicacion: new Prisma.Decimal(40),
-        horasPlan: new Prisma.Decimal(horasPlan321),
-        tarifaAplicada: diego.tarifaHora,
-      },
-      update: {
-        dedicacion: new Prisma.Decimal(40),
-        horasPlan: new Prisma.Decimal(horasPlan321),
-        tarifaAplicada: diego.tarifaHora,
-      },
-    });
-  }
-
-  if (t431) {
-    const horasPlan431 = calcularHorasPlan(t431.duracionDias, Number(rodrigo.horasDiarias), 30);
-    await prisma.asignacion.upsert({
-      where: {
-        tareaId_profesionalId: {
-          tareaId: t431.id,
-          profesionalId: rodrigo.id,
-        },
-      },
-      create: {
-        tareaId: t431.id,
-        profesionalId: rodrigo.id,
-        dedicacion: new Prisma.Decimal(30),
-        horasPlan: new Prisma.Decimal(horasPlan431),
-        tarifaAplicada: rodrigo.tarifaHora,
-      },
-      update: {
-        dedicacion: new Prisma.Decimal(30),
-        horasPlan: new Prisma.Decimal(horasPlan431),
-        tarifaAplicada: rodrigo.tarifaHora,
-      },
-    });
+      });
+    }
   }
 }
 
@@ -1742,12 +1985,12 @@ async function sembrarKpis(): Promise<void> {
       ambito: AmbitoKpi.CAMBIO,
       formula: 'SC_IMPACTO_COSTO_TOTAL',
       unidad: UnidadKpi.CLP,
-      meta: 500000,
+      meta: 10000000,
       direccion: DireccionKpi.MENOR_MEJOR,
       esAdicional: false,
       umbrales: [
-        { semaforo: Semaforo.VERDE, valorDesde: 500000 },
-        { semaforo: Semaforo.AMARILLO, valorDesde: 1000000 },
+        { semaforo: Semaforo.VERDE, valorDesde: 10000000 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 21350000 },
       ],
     },
     {
@@ -1757,12 +2000,12 @@ async function sembrarKpis(): Promise<void> {
       ambito: AmbitoKpi.CAMBIO,
       formula: 'SC_IMPACTO_DIAS_TOTAL',
       unidad: UnidadKpi.DIAS,
-      meta: 5,
+      meta: 3,
       direccion: DireccionKpi.MENOR_MEJOR,
       esAdicional: false,
       umbrales: [
-        { semaforo: Semaforo.VERDE, valorDesde: 5 },
-        { semaforo: Semaforo.AMARILLO, valorDesde: 10 },
+        { semaforo: Semaforo.VERDE, valorDesde: 3 },
+        { semaforo: Semaforo.AMARILLO, valorDesde: 5 },
       ],
     },
     {
@@ -1934,7 +2177,7 @@ export async function sembrar(): Promise<void> {
         include: { calendario: true },
       });
       calendarioId = creado.calendario!.id;
-      if (creado.nombre === 'AutoFix · Implementación') {
+      if (creado.nombre === NOMBRE_PROYECTO_PRINCIPAL) {
         proyectoPrincipalId = creado.id;
       }
     } else {
@@ -1946,7 +2189,7 @@ export async function sembrar(): Promise<void> {
       } else {
         calendarioId = existente.calendario.id;
       }
-      if (existente.nombre === 'AutoFix · Implementación') {
+      if (existente.nombre === NOMBRE_PROYECTO_PRINCIPAL) {
         proyectoPrincipalId = existente.id;
       }
     }
@@ -1978,15 +2221,15 @@ export async function sembrar(): Promise<void> {
   if (proyectoPrincipalId) {
     await recalcularProyectoSemilla(proyectoPrincipalId);
 
-    const tarea112 = await prisma.tarea.findFirst({
-      where: { proyectoId: proyectoPrincipalId, codigo: '1.1.2' },
+    const tarea121 = await prisma.tarea.findFirst({
+      where: { proyectoId: proyectoPrincipalId, codigo: '1.2.1' },
     });
-    if (tarea112) {
+    if (tarea121) {
       await prisma.tarea.update({
-        where: { id: tarea112.id },
+        where: { id: tarea121.id },
         data: {
-          inicioReal: fechaIsoADate('2026-11-05'),
-          porcentajeAvance: new Prisma.Decimal(50),
+          inicioReal: fechaIsoADate('2026-10-27'),
+          porcentajeAvance: new Prisma.Decimal(85),
         },
       });
       await new Promise((r) => setTimeout(r, 100));

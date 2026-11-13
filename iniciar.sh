@@ -37,7 +37,7 @@ docker compose up -d --build
 echo "[2/4] Esperando la API y la base de datos..."
 esperar "http://localhost:${API_PORT}/salud" 300
 
-echo "[3/4] Cargando los datos del caso de prueba AutoFix Conecta..."
+echo "[3/4] Cargando los datos del caso de prueba AutoFix Gestión..."
 docker compose exec -T api pnpm --filter @autofix/api db:seed
 docker compose exec -T api touch /app/apps/api/dist/main.js
 sleep 5

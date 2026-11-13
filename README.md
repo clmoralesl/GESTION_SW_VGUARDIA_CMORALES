@@ -11,7 +11,7 @@ Requisito único: [Docker Desktop](https://www.docker.com/products/docker-deskto
 | Windows     | doble clic en `iniciar.bat`    | `reiniciar-datos.bat`        | `detener.bat`  |
 | Mac / Linux | `./iniciar.sh` en una terminal | `./reiniciar-datos.sh`       | `./detener.sh` |
 
-El script crea el archivo `.env`, construye y levanta los contenedores, aplica las migraciones, carga el caso de prueba **AutoFix Conecta · Piloto 3 sucursales** y abre http://localhost:5173. La primera ejecución tarda entre 5 y 10 minutos porque descarga dependencias; las siguientes, menos de un minuto.
+El script crea el archivo `.env`, construye y levanta los contenedores, aplica las migraciones, carga el caso de prueba **AutoFix Gestión · Piloto 3 sucursales** y abre http://localhost:5173. La primera ejecución tarda entre 5 y 10 minutos porque descarga dependencias; las siguientes, menos de un minuto.
 
 La fecha de corte del sistema es fija (`FECHA_CORTE=2026-11-16` en `.env`) para que los indicadores, atrasos y valores de la demostración sean siempre los mismos. Se eligen dos roles con el selector superior: **JP** (Jefe de Proyecto) y **CC** (Comité de Cambios).
 

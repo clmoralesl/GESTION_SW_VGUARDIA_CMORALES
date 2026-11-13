@@ -8,7 +8,7 @@ for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
   if "%%a"=="API_PORT" set API_PORT=%%b
 )
 
-echo Restaurando los datos iniciales del caso de prueba AutoFix Conecta...
+echo Restaurando los datos iniciales del caso de prueba AutoFix Gestión...
 docker compose exec -T api pnpm --filter @autofix/api db:reset
 if errorlevel 1 goto error
 docker compose exec -T api touch /app/apps/api/dist/main.js

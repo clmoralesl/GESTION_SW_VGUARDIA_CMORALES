@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import {
   AmbitoKpi,
   CategoriaCambio,
@@ -10,6 +12,7 @@ import {
   Prioridad,
   Prisma,
   PrismaClient,
+  RolUsuario,
   Semaforo,
   TipoDependencia,
   UnidadKpi,
@@ -685,6 +688,284 @@ async function sembrarHitos(proyectoId: number): Promise<void> {
   }
 }
 
+interface DetalleEtapaSemilla {
+  r?: string;
+  c?: string;
+  i?: string;
+  f?: string;
+  ev?: [string, string, string[]][];
+}
+
+const DETALLE_ETAPAS: Record<string, Record<string, DetalleEtapaSemilla>> = {
+  'SC-001': {
+    '1': {
+      r: 'Andrés Contreras',
+      c: 'Necesidad detectada en la prueba de concepto de 1.3.1: el servicio de recepción de órdenes del ERP exige configuración del proveedor no cubierta por las 60 horas contratadas. Se documentaron los métodos faltantes y se estimaron 40 horas adicionales. Pendiente: firma del Gerente de Finanzas para pasar a análisis.',
+      ev: [
+        [
+          'Informe_prueba_concepto_ERP.pdf',
+          'Informe de prueba de concepto del ERP (SC-001)',
+          [
+            'Tarea: 1.3.1 Diseñar integraciones y arquitectura',
+            'Resultado: el servicio de facturación responde, pero la recepción de órdenes',
+            'cerradas requiere habilitar 2 métodos adicionales del proveedor.',
+            'Estimación del proveedor: 40 horas x $60.000 = $2.400.000.',
+            'Riesgo asociado: R-02 (probabilidad 3, impacto 4).',
+            'Responsable: Andrés Contreras.',
+          ],
+        ],
+      ],
+    },
+    '2': { r: 'Valeska Guardia', i: '2026-11-17', f: '2026-11-20' },
+    '3': { r: 'Claudio Morales', i: '2026-11-23', f: '2026-11-25' },
+  },
+  'SC-002': {
+    '1': {
+      r: 'Valeska Guardia',
+      c: 'El Director Comercial pidió avisar al cliente cuando su garantía esté por vencer, con enlace al portal para agendar revisión. Se registró como solicitud de alcance vinculada a REQ-06 y REQ-08.',
+      ev: [
+        [
+          'Minuta_reunion_Director_Comercial.pdf',
+          'Minuta de reunión con el Director Comercial (SC-002)',
+          [
+            'Asistentes: Director Comercial, Valeska Guardia, Claudio Morales.',
+            'Necesidad: aviso por WhatsApp 30 días antes del vencimiento de la garantía,',
+            'con enlace al portal para agendar una revisión.',
+            'Beneficio esperado: más retorno de clientes y más uso del portal.',
+            'Requisitos relacionados: REQ-06 y REQ-08.',
+          ],
+        ],
+      ],
+    },
+    '2': {
+      r: 'Andrés Contreras',
+      c: 'Análisis de impacto: +3 días en 2.2.3 (historial y garantías, tarea crítica), asignación de Javiera Rivas al 40 % para las plantillas de alerta y +$2.000.000 de presupuesto. El cierre se movería del 28-05-2027 al 02-06-2027, dentro del límite del 04-06-2027.',
+      ev: [
+        [
+          'Informe_impacto_SC-002.pdf',
+          'Informe de impacto de SC-002',
+          [
+            'Duración: 2.2.3 pasa de 20 a 23 días hábiles (tarea crítica).',
+            'Recursos: Javiera Rivas al 40 % en 2.2.3 (plantillas de alerta).',
+            'Costo: presupuesto de $123.408.680 a $125.408.680.',
+            'Plazo: cierre del 28-05-2027 al 02-06-2027 (consume 3 de 5 días de reserva).',
+            'Fuente: simulación de la app antes de aprobar.',
+          ],
+        ],
+      ],
+    },
+    '3': {
+      r: 'Claudio Morales',
+      c: 'Riesgo evaluado como alto (probabilidad 3 x impacto 4 = 12) por consumir 3 de los 5 días de reserva de cronograma y por depender de la aprobación de plantillas de WhatsApp (R-12). Se recomienda aprobar con seguimiento semanal de la ruta crítica. Queda a decisión del Comité de Cambios.',
+      ev: [
+        [
+          'Matriz_riesgo_SC-002.pdf',
+          'Evaluación de riesgos de SC-002',
+          [
+            'Probabilidad: 3. Impacto: 4. Nivel: 12 (alto).',
+            'Riesgos relacionados: R-07 (atraso de la fábrica) y R-12 (plantillas de WhatsApp).',
+            'Reserva de cronograma disponible: 5 días hábiles; el cambio consume 3.',
+            'Recomendación: aprobar con seguimiento semanal de la ruta crítica.',
+          ],
+        ],
+      ],
+    },
+    '4': { r: 'Claudio Morales' },
+    '5': { r: 'Valeska Guardia' },
+    '6': { r: 'Andrés Contreras' },
+    '7': { r: 'Claudio Morales' },
+    '8': { r: 'Valeska Guardia' },
+    '9': { r: 'Claudio Morales' },
+    '10': { r: 'Valeska Guardia' },
+  },
+  'SC-003': {
+    '1': {
+      r: 'Bodega central',
+      c: 'Bodega central advirtió que la interfaz del inventario se cae en los cierres de mes. Sin respaldo, las órdenes quedarían sin repuestos registrados (REQ-04).',
+    },
+    '2': {
+      r: 'Andrés Contreras',
+      c: 'Se evaluaron dos alternativas: reintentos en línea o carga programada diaria del consumo. Se eligió la carga programada por su menor costo (estimado en $1.200.000 de horas de integración) y porque no modifica el inventario (RES-04).',
+    },
+    '3': {
+      r: 'Claudio Morales',
+      c: 'Riesgo medio-alto (2 x 4 = 8): sin la carga programada se incumpliría REQ-04 si falla la interfaz (R-03). El Comité de Cambios aprobó la solicitud el 25-10-2026.',
+      ev: [
+        [
+          'Acta_Comite_Cambios_SC-003.pdf',
+          'Acta del Comité de Cambios (SC-003)',
+          [
+            'Fecha: 25-10-2026.',
+            'Asistentes: Gerente General, Gerente de Operaciones, Director Comercial, Claudio Morales.',
+            'Decisión: APROBADA.',
+            'Fundamento: asegura el registro de repuestos por orden (REQ-04) ante fallas de la interfaz (R-03).',
+            'Condición: definir el formato del archivo con el proveedor del inventario.',
+          ],
+        ],
+      ],
+    },
+    '4': {
+      r: 'Andrés Contreras',
+      i: '2026-10-26',
+      f: '2026-11-20',
+      c: 'En curso: diseño del archivo de carga programada y del proceso nocturno de conciliación. Acción correctiva pendiente: acordar el formato con el proveedor del inventario.',
+    },
+    '5': { r: 'Valeska Guardia', i: '2026-11-23', f: '2026-11-24' },
+    '6': { r: 'Andrés Contreras', i: '2026-11-25', f: '2026-12-18' },
+    '7': { r: 'Claudio Morales', i: '2026-12-21', f: '2026-12-23' },
+    '8': { r: 'Valeska Guardia', i: '2026-12-28', f: '2026-12-29' },
+    '9': { r: 'Andrés Contreras', i: '2026-12-30', f: '2027-01-05' },
+    '10': { r: 'Valeska Guardia', i: '2027-01-06', f: '2027-01-15' },
+  },
+  'SC-004': {
+    '1': {
+      r: 'Valeska Guardia',
+      c: 'El área comercial pidió aplicaciones nativas para iOS y Android, además del portal responsivo.',
+    },
+    '2': {
+      r: 'Andrés Contreras',
+      c: 'Estimación: 3 meses de 2 desarrolladores móviles (unos $26.000.000) y publicación en tiendas. No cabe en la ruta crítica: movería el cierre más allá del límite del 04-06-2027.',
+    },
+    '3': {
+      r: 'Claudio Morales',
+      c: 'Riesgo alto (4 x 4 = 16): incumpliría RES-01 (plazo) y contradice EXC-01. El Comité de Cambios la rechazó el 28-10-2026 y la derivó al plan de escalamiento.',
+      ev: [
+        [
+          'Acta_Comite_Cambios_SC-004.pdf',
+          'Acta del Comité de Cambios (SC-004)',
+          [
+            'Fecha: 28-10-2026.',
+            'Decisión: RECHAZADA.',
+            'Fundamento: fuera del alcance aprobado (EXC-01); costo estimado de $26.000.000',
+            'y atraso del cierre más allá del límite de 8 meses (RES-01).',
+            'Derivación: evaluar en el plan de escalamiento posterior al piloto.',
+          ],
+        ],
+      ],
+    },
+  },
+  'SC-005': {
+    '1': {
+      r: 'Valeska Guardia',
+      c: 'Operaciones pidió que Finanzas valide el mapeo entre la orden de trabajo y el documento de cobro, para evitar diferencias entre presupuesto y cobro (317 reclamos al año).',
+    },
+    '2': {
+      r: 'Valeska Guardia',
+      c: 'El cambio solo agrega un paso de validación en 1.3.1; no cambia duraciones ni costos del proyecto.',
+    },
+    '3': {
+      r: 'Claudio Morales',
+      c: 'Riesgo bajo (1 x 2 = 2). Aprobada por el Comité de Cambios el 16-10-2026.',
+      ev: [
+        [
+          'Acta_Comite_Cambios_SC-005.pdf',
+          'Acta del Comité de Cambios (SC-005)',
+          [
+            'Fecha: 16-10-2026.',
+            'Decisión: APROBADA.',
+            'Fundamento: reduce el riesgo de diferencias entre presupuesto y cobro.',
+            'Impacto en cronograma y costo: ninguno.',
+          ],
+        ],
+      ],
+    },
+    '4': { r: 'Claudio Morales' },
+    '5': {
+      r: 'Valeska Guardia',
+      c: 'Se comunicó el nuevo paso a Finanzas, al arquitecto y al proveedor del ERP por correo y en la reunión semanal del 19-10-2026.',
+    },
+    '6': {
+      r: 'Andrés Contreras',
+      c: 'Finanzas revisó la matriz de mapeo campo por campo (montos, impuestos, descuentos y repuestos) y dejó 6 observaciones.',
+    },
+    '7': {
+      r: 'Claudio Morales',
+      c: 'Se verificó que las 6 observaciones quedaran registradas y asignadas; el mapeo pasó a versión 1.1.',
+    },
+    '8': { r: 'Valeska Guardia' },
+    '9': {
+      r: 'Valeska Guardia',
+      c: 'Acción correctiva: actualizar la matriz de mapeo con las observaciones de Finanzas. Cerrada el 30-10-2026.',
+    },
+    '10': {
+      r: 'Valeska Guardia',
+      c: 'Finanzas quedó como validador obligatorio en el procedimiento de cambios de integración. Adopción medida: 85 % de los campos del mapeo validados en la primera revisión.',
+      ev: [
+        [
+          'Informe_adopcion_SC-005.pdf',
+          'Informe de adopción de SC-005',
+          [
+            'Indicador: campos del mapeo validados por Finanzas en la primera revisión.',
+            'Resultado: 85 % (meta del KPI de adopción: 90 %).',
+            'Acción de mejora: incluir a Finanzas desde el diseño de cada nueva interfaz.',
+            'Estado: cambio adoptado y solicitud cerrada.',
+          ],
+        ],
+      ],
+    },
+  },
+};
+
+function textoPdf(texto: string): string {
+  return texto.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function crearPdfEvidencia(titulo: string, lineas: string[]): Buffer {
+  const contenido = [
+    'BT',
+    '/F1 14 Tf',
+    '50 780 Td',
+    `(${textoPdf(titulo)}) Tj`,
+    '/F1 10 Tf',
+    '0 -20 Td',
+    '(AutoFix Conecta - Piloto 3 sucursales) Tj',
+    ...lineas.flatMap((l) => ['0 -16 Td', `(${textoPdf(l)}) Tj`]),
+    'ET',
+  ].join('\n');
+  const cuerpo = Buffer.from(contenido, 'latin1');
+  const objetos = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+  ];
+  const partes: Buffer[] = [Buffer.from('%PDF-1.4\n', 'latin1')];
+  const desplazamientos: number[] = [];
+  let largo = partes[0]!.length;
+  const agregar = (b: Buffer) => {
+    partes.push(b);
+    largo += b.length;
+  };
+  objetos.forEach((o, i) => {
+    desplazamientos.push(largo);
+    agregar(Buffer.from(`${i + 1} 0 obj\n${o}\nendobj\n`, 'latin1'));
+  });
+  desplazamientos.push(largo);
+  agregar(Buffer.from(`5 0 obj\n<< /Length ${cuerpo.length} >>\nstream\n`, 'latin1'));
+  agregar(cuerpo);
+  agregar(Buffer.from('\nendstream\nendobj\n', 'latin1'));
+  const inicioXref = largo;
+  const xref = [
+    'xref',
+    `0 ${desplazamientos.length + 1}`,
+    '0000000000 65535 f ',
+    ...desplazamientos.map((d) => `${String(d).padStart(10, '0')} 00000 n `),
+    'trailer',
+    `<< /Size ${desplazamientos.length + 1} /Root 1 0 R >>`,
+    'startxref',
+    String(inicioXref),
+    '%%EOF',
+  ].join('\n');
+  agregar(Buffer.from(xref + '\n', 'latin1'));
+  return Buffer.concat(partes);
+}
+
+function guardarEvidenciaSemilla(nombreDisco: string, contenido: Buffer): void {
+  const directorio = process.env.RUTA_UPLOADS || resolve(process.cwd(), 'uploads');
+  mkdirSync(directorio, { recursive: true });
+  writeFileSync(join(directorio, nombreDisco), contenido);
+}
+
 async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
   const conteo = await prisma.solicitudCambio.count({ where: { proyectoId } });
   if (conteo > 0) return;
@@ -926,8 +1207,21 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
     });
 
     for (const etapaMod of estadoModelo.etapas) {
-      let fechaInicioSeed: Date | null = null;
-      let fechaFinSeed: Date | null = null;
+      const detalle = DETALLE_ETAPAS[def.codigo]?.[String(etapaMod.numero)] ?? {};
+      const iniciada = etapaMod.fechaIniciada ? String(etapaMod.fechaIniciada).slice(0, 10) : null;
+      const completada = etapaMod.fechaCompletada
+        ? String(etapaMod.fechaCompletada).slice(0, 10)
+        : null;
+      let fechaInicioSeed: Date | null = detalle.i
+        ? fechaIsoADate(detalle.i)
+        : iniciada
+          ? fechaIsoADate(iniciada)
+          : null;
+      let fechaFinSeed: Date | null = detalle.f
+        ? fechaIsoADate(detalle.f)
+        : completada
+          ? fechaIsoADate(completada)
+          : null;
       if (def.codigo === 'SC-001' && etapaMod.numero === 1) {
         fechaInicioSeed = fechaIsoADate('2026-10-26');
         fechaFinSeed = fechaIsoADate('2026-10-30');
@@ -947,13 +1241,31 @@ async function sembrarSolicitudesCambio(proyectoId: number): Promise<void> {
           fechaCompletada: etapaMod.fechaCompletada
             ? fechaIsoADate(String(etapaMod.fechaCompletada).slice(0, 10))
             : null,
-          comentario: etapaMod.comentario ?? null,
+          responsable: detalle.r ?? null,
+          comentario: etapaMod.comentario ?? detalle.c ?? null,
           porcentajeAdopcion:
             def.codigo === 'SC-005' && etapaMod.numero === 10 && def.adopcion
               ? new Prisma.Decimal(def.adopcion)
               : null,
         },
       });
+
+      for (const [indice, [nombreArchivo, titulo, lineas]] of (detalle.ev ?? []).entries()) {
+        const contenido = crearPdfEvidencia(titulo, lineas);
+        const nombreDisco = `semilla-${def.codigo.toLowerCase()}-etapa${etapaMod.numero}-${indice + 1}.pdf`;
+        guardarEvidenciaSemilla(nombreDisco, contenido);
+        await prisma.evidencia.create({
+          data: {
+            etapaId: creadaEtapa.id,
+            nombreArchivo,
+            rutaArchivo: nombreDisco,
+            tipoMime: 'application/pdf',
+            tamanoBytes: contenido.length,
+            subidoPor:
+              def.codigo === 'SC-001' ? RolUsuario.JEFE_PROYECTO : RolUsuario.COMITE_CAMBIOS,
+          },
+        });
+      }
 
       const debeCrearAcciones =
         def.accionesCorrectivas &&

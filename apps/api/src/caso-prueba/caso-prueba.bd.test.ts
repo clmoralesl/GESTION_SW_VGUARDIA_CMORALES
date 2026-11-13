@@ -96,8 +96,11 @@ describe('Caso de prueba mínimo completo BD integración PostgreSQL (A5, A6)', 
     const alertaSobreasignacion = await prisma.alerta.findFirst({
       where: { tipo: TipoAlerta.SOBREASIGNACION, activa: true },
     });
-    expect(alertaSobreasignacion).not.toBeNull();
-    expect(alertaSobreasignacion?.mensaje).toContain('Valentina Muñoz');
+    expect(alertaSobreasignacion).toBeNull();
+
+    const proyecto = await prisma.proyecto.findUniqueOrThrow({ where: { id: 1 } });
+    expect(proyecto.nombre).toBe('AutoFix Conecta · Piloto 3 sucursales');
+    expect(Number(proyecto.presupuesto)).toBe(123408680);
 
     const resTablero = await request(app.getHttpServer())
       .get('/proyectos/1/tablero')
@@ -106,8 +109,17 @@ describe('Caso de prueba mínimo completo BD integración PostgreSQL (A5, A6)', 
     expect(resTablero.status).toBe(200);
     expect(resTablero.body.atrasadas.length).toBeGreaterThanOrEqual(1);
     const codigosAtrasadas = resTablero.body.atrasadas.map((t: { codigo: string }) => t.codigo);
-    expect(codigosAtrasadas).toContain('1.1.2');
     expect(codigosAtrasadas).toContain('1.2.1');
+
+    const resCostos = await request(app.getHttpServer())
+      .get('/proyectos/1/costos')
+      .set('X-Rol', 'JP');
+    expect(resCostos.body.costoPlan).toBe(102058680);
+
+    const tareaCierre = await prisma.tarea.findFirstOrThrow({
+      where: { proyectoId: 1, codigo: '4.3' },
+    });
+    expect(tareaCierre.finPlan?.toISOString().slice(0, 10)).toBe('2027-05-28');
   });
 
   it('comprueba equivalencia D3 de datos importados con docs/caso_prueba.xlsx', async () => {

@@ -51,7 +51,7 @@ import type { ContextoRecalculo } from '../src/recalculo/recalculo.tipos';
 
 const prisma = new PrismaClient();
 
-const NOMBRE_PROYECTO_PRINCIPAL = 'AutoFix Conecta · Piloto 3 sucursales';
+const NOMBRE_PROYECTO_PRINCIPAL = 'AutoFix Gestión · Piloto 3 sucursales';
 
 const PROYECTOS_SEMILLA = [
   {
@@ -918,7 +918,7 @@ function crearPdfEvidencia(titulo: string, lineas: string[]): Buffer {
     `(${textoPdf(titulo)}) Tj`,
     '/F1 10 Tf',
     '0 -20 Td',
-    '(AutoFix Conecta - Piloto 3 sucursales) Tj',
+    '(AutoFix Gestión - Piloto 3 sucursales) Tj',
     ...lineas.flatMap((l) => ['0 -16 Td', `(${textoPdf(l)}) Tj`]),
     'ET',
   ].join('\n');

@@ -2,6 +2,19 @@
 
 Sistema de planificación, seguimiento y gestión del cambio: proyectos, tareas jerárquicas, Carta Gantt con dependencias FS/SS/FF/SF, recursos y costos, hitos, KPI configurables, gestión del cambio en 10 etapas y dos tableros de comando.
 
+## Inicio rápido (para evaluar)
+
+Requisito único: [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y en ejecución.
+
+| Sistema     | Iniciar                        | Volver a los datos iniciales | Apagar         |
+| ----------- | ------------------------------ | ---------------------------- | -------------- |
+| Windows     | doble clic en `iniciar.bat`    | `reiniciar-datos.bat`        | `detener.bat`  |
+| Mac / Linux | `./iniciar.sh` en una terminal | `./reiniciar-datos.sh`       | `./detener.sh` |
+
+El script crea el archivo `.env`, construye y levanta los contenedores, aplica las migraciones, carga el caso de prueba **AutoFix Conecta · Piloto 3 sucursales** y abre http://localhost:5173. La primera ejecución tarda entre 5 y 10 minutos porque descarga dependencias; las siguientes, menos de un minuto.
+
+La fecha de corte del sistema es fija (`FECHA_CORTE=2026-11-16` en `.env`) para que los indicadores, atrasos y valores de la demostración sean siempre los mismos. Se eligen dos roles con el selector superior: **JP** (Jefe de Proyecto) y **CC** (Comité de Cambios).
+
 ## Estructura
 
 ```

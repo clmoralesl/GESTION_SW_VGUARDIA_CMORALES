@@ -99,7 +99,7 @@ describe('Caso de prueba mínimo completo BD integración PostgreSQL (A5, A6)', 
     expect(alertaSobreasignacion).toBeNull();
 
     const proyecto = await prisma.proyecto.findUniqueOrThrow({ where: { id: 1 } });
-    expect(proyecto.nombre).toBe('AutoFix Conecta · Piloto 3 sucursales');
+    expect(proyecto.nombre).toBe('AutoFix Gestión · Piloto 3 sucursales');
     expect(Number(proyecto.presupuesto)).toBe(123408680);
 
     const resTablero = await request(app.getHttpServer())
